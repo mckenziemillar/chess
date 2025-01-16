@@ -246,10 +246,12 @@ public class ChessPiece {
                 }
             }
         }
-        if(myPosition.getRow() == 2){
-            int newRow = myPosition.getRow() + 2;
+        ChessGame.TeamColor myColor = board.getPiece(myPosition).getTeamColor();
+        if((myColor == ChessGame.TeamColor.WHITE && myPosition.getRow() == 2)||
+                (myColor == ChessGame.TeamColor.BLACK && myPosition.getRow() == 7)){
+            int newRow = myPosition.getRow() + colorInt*2;
             ChessPosition newPos = new ChessPosition(newRow, myPosition.getColumn());
-            if(board.getPiece(newPos) != null) {
+            if(board.getPiece(newPos) == null && (board.getPiece(new ChessPosition(newRow - (colorInt), myPosition.getColumn())) == null)) {
                 moves.add(new ChessMove(myPosition, newPos, null));
             }
         }
@@ -265,8 +267,8 @@ public class ChessPiece {
     }
 
     private boolean promotionNeeded(ChessBoard board, ChessPosition myPosition, ChessPosition newPos){
-        return((board.getPiece(myPosition).getTeamColor() == ChessGame.TeamColor.WHITE && newPos.getRow() == 1)
-                || (board.getPiece(myPosition).getTeamColor() == ChessGame.TeamColor.BLACK && newPos.getRow() == 8));
+        return((board.getPiece(myPosition).getTeamColor() == ChessGame.TeamColor.WHITE && newPos.getRow() == 8)
+                || (board.getPiece(myPosition).getTeamColor() == ChessGame.TeamColor.BLACK && newPos.getRow() == 1));
     }
 
     @Override
