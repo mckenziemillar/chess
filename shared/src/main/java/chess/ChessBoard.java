@@ -7,9 +7,10 @@ package chess;
  * signature of the existing methods.
  */
 public class ChessBoard {
-
+    ChessPiece[][] board;
     public ChessBoard() {
-        
+        board = new ChessPiece[8][8];
+
     }
 
     /**
@@ -19,7 +20,7 @@ public class ChessBoard {
      * @param piece    the piece to add
      */
     public void addPiece(ChessPosition position, ChessPiece piece) {
-        throw new RuntimeException("Not implemented");
+        this.board[position.getRow()-1][position.getColumn()-1] = piece;
     }
 
     /**
@@ -30,7 +31,11 @@ public class ChessBoard {
      * position
      */
     public ChessPiece getPiece(ChessPosition position) {
-        throw new RuntimeException("Not implemented");
+        return this.board[position.getRow()-1][position.getColumn()-1];
+    }
+
+    public ChessPiece[][] getBoard() {
+        return this.board;
     }
 
     /**
@@ -38,6 +43,125 @@ public class ChessBoard {
      * (How the game of chess normally starts)
      */
     public void resetBoard() {
-        throw new RuntimeException("Not implemented");
+        ChessGame.TeamColor white = ChessGame.TeamColor.WHITE;
+        ChessGame.TeamColor black = ChessGame.TeamColor.BLACK;
+        for(int i = 0; i < 2; i++){
+            ChessGame.TeamColor color;
+            if(i == 0){ color = black; }
+            else {color = white;}
+            setPawns(color);
+            setRooks(color);
+            setKnights(color);
+            setBishops(color);
+            setQueen(color);
+            setKing(color);
+
+        }
+
     }
+
+
+    private void setPawns(ChessGame.TeamColor color) {
+        int offset = 2;
+        if (color == ChessGame.TeamColor.BLACK){
+            offset = 7;
+        }
+        for(int i = 1; i <= 8; i++){
+            ChessPosition pos = new ChessPosition(offset, i);
+            addPiece(pos, new ChessPiece(color, ChessPiece.PieceType.PAWN));
+        }
+    }
+
+    private void setRooks(ChessGame.TeamColor color){
+        int offset = 1;
+        if (color == ChessGame.TeamColor.BLACK){
+            offset = 8;
+        }
+        ChessPosition pos1 = new ChessPosition(offset, 1);
+        ChessPosition pos2 = new ChessPosition(offset, 8);
+        addPiece(pos1, new ChessPiece(color, ChessPiece.PieceType.ROOK));
+        addPiece(pos2, new ChessPiece(color, ChessPiece.PieceType.ROOK));
+    }
+    private void setKnights(ChessGame.TeamColor color){
+        int offset = 1;
+        if (color == ChessGame.TeamColor.BLACK){
+            offset = 8;
+        }
+        ChessPosition pos1 = new ChessPosition(offset, 2);
+        ChessPosition pos2 = new ChessPosition(offset, 7);
+        addPiece(pos1, new ChessPiece(color, ChessPiece.PieceType.KNIGHT));
+        addPiece(pos2, new ChessPiece(color, ChessPiece.PieceType.KNIGHT));
+    }
+
+    private void setBishops(ChessGame.TeamColor color){
+        int offset = 1;
+        if (color == ChessGame.TeamColor.BLACK){
+            offset = 8;
+        }
+        ChessPosition pos1 = new ChessPosition(offset, 3);
+        ChessPosition pos2 = new ChessPosition(offset, 6);
+        addPiece(pos1, new ChessPiece(color, ChessPiece.PieceType.BISHOP));
+        addPiece(pos2, new ChessPiece(color, ChessPiece.PieceType.BISHOP));
+    }
+
+    private void setQueen(ChessGame.TeamColor color){
+        int offset = 1;
+        if (color == ChessGame.TeamColor.BLACK){
+            offset = 8;
+        }
+        ChessPosition pos = new ChessPosition(offset, 4);
+        addPiece(pos, new ChessPiece(color, ChessPiece.PieceType.QUEEN));
+    }
+
+    private void setKing(ChessGame.TeamColor color){
+        int offset = 1;
+        if (color == ChessGame.TeamColor.BLACK){
+            offset = 8;
+        }
+        ChessPosition pos = new ChessPosition(offset, 5);
+        addPiece(pos, new ChessPiece(color, ChessPiece.PieceType.KING));
+    }
+
+    public void print(){
+        System.out.println("Board: ");
+        for(int i = 7; i >= 0; i--){
+            System.out.println("\n");
+            for(int j = 0; j < 8; j++){
+                if(board[i][j] == null){
+                    System.out.print(" empty ");
+                } else {
+                    System.out.print(" " + board[i][j].getPieceType() + "(" + board[i][j].getTeamColor() + ") ");
+                }
+            }
+        }
+        System.out.print("\n");
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true; // Check if the objects are the same instance
+        if (/*obj == null || */getClass() != obj.getClass()) return false; // Check if the object is null or of a different class
+
+        ChessBoard that = (ChessBoard) obj; // Cast the object to ChessBoard
+
+        // Compare the two boards element by element
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                ChessPiece thisPiece = this.board[i][j];
+                ChessPiece thatPiece = that.board[i][j];
+
+                // Check for nulls and equality
+                if (thisPiece == null && thatPiece != null || thisPiece != null && thatPiece == null) {
+                    return false;
+                }
+                if (thisPiece != null && !thisPiece.equals(thatPiece)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+
 }

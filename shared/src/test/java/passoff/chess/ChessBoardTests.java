@@ -35,7 +35,20 @@ public class ChessBoardTests {
 
         var actualBoard = new ChessBoard();
         actualBoard.resetBoard();
-
+        actualBoard.print();
+        expectedBoard.print();
+        System.out.println("Board: ");
+        for(int i = 7; i >= 0; i--){
+            for(int j = 0; j < 8; j++){
+                if(actualBoard.getBoard()[i][j] == expectedBoard.getBoard()[i][j]){
+                    System.out.print(" same ");
+                } else {
+                    System.out.print(" diff ");
+                }
+            }
+            System.out.print("\n");
+        }
+        System.out.print("\n");
         Assertions.assertEquals(expectedBoard, actualBoard);
     }
 
