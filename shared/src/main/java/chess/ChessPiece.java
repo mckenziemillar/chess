@@ -77,4 +77,30 @@ public class ChessPiece {
                 this.getTeamColor() == piece.getTeamColor();
     }
 
+    @Override
+    public String toString(){
+        String pieceStr = "";
+        switch(pieceColor){
+            case BLACK:
+                switch (pieceType){
+                    case KING -> pieceStr = "k";
+                    case QUEEN -> pieceStr = "q";
+                    case BISHOP -> pieceStr = "b";
+                    case ROOK -> pieceStr = "r";
+                    case KNIGHT -> pieceStr = "n";
+                    case PAWN -> pieceStr = "p";
+                }
+            case WHITE:
+                switch (pieceType){
+                    case KING -> pieceStr = "K";
+                    case QUEEN -> pieceStr = "Q";
+                    case BISHOP -> pieceStr = "B";
+                    case ROOK -> pieceStr = "R";
+                    case KNIGHT -> pieceStr = "N";
+                    case PAWN -> pieceStr = "P";
+                }
+        }
+        return pieceStr;
+    }
+
 }

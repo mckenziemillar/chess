@@ -29,6 +29,11 @@ public class ChessPosition {
     public int getColumn() { return col; }
 
     @Override
+    public String toString(){
+        return "row: "+ row + ", col: " + col;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;

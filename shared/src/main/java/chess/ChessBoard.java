@@ -16,7 +16,13 @@ public class ChessBoard {
     }
 
     public ChessBoard(ChessBoard copy){
-        this.board = Arrays.copyOf(copy.board, copy.board.length);
+        board = new ChessPiece[8][8];
+        for (int i=0; i< 8; i++) {
+            for (int j=0; j < 8; j++) {
+                board[i][j] = copy.board[i][j];
+            }
+        }
+//        this.board = Arrays.copyOf(copy.board, copy.board.length);
     }
 
     /**
@@ -46,6 +52,23 @@ public class ChessBoard {
 
     public ChessPiece[][] getBoard() {
         return this.board;
+    }
+
+
+    @Override
+    public String toString(){
+        StringBuilder boardStr = new StringBuilder();
+        for(ChessPiece[] row : board){
+            for(ChessPiece piece : row){
+                if(piece == null){
+                    boardStr.append("| ");
+                } else{
+                    boardStr.append("|").append(piece);
+                }
+            }
+            boardStr.append("|\n");
+        }
+        return boardStr.toString();
     }
 
 
