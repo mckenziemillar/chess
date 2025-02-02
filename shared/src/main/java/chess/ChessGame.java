@@ -141,12 +141,27 @@ public class ChessGame {
     public boolean isInCheckmate(TeamColor teamColor) {
         ChessPosition kingPos = findKingPos(teamColor, board);
         if(!isInCheck(teamColor)){
+            System.out.println("Not in Check.");
             return false;
         } else {
-            Collection<ChessMove> kingMoves = board.getPiece(kingPos).pieceMoves(board, kingPos);
-            for(ChessMove move : kingMoves){
-                if(!putsTeamInCheck(move)){
-                    return false;
+            System.out.println("In Check.");
+        }
+
+        Collection<ChessMove> possibleMoves;
+        for(int r = 1; r <= 8; r++){
+            for(int c = 1; c <= 8; c++){
+                ChessPosition pos = new ChessPosition(r, c);
+                ChessPiece piece = board.getPiece(pos);
+                if(piece != null && piece.getTeamColor()== teamColor) {
+                    possibleMoves = piece.pieceMoves(board, pos);
+                    for(ChessMove move : possibleMoves){
+                        if(!putsTeamInCheck(move)){
+                            System.out.println("Move helpful:" + move.getEndPosition().toString() + ".");
+                            return false;
+                        } else {
+                            System.out.println("Move not helpful.");
+                        }
+                    }
                 }
             }
         }
