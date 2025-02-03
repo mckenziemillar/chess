@@ -83,7 +83,13 @@ public class ChessGame {
             throw new InvalidMoveException("Invalid move. ");
         }
         board.removePiece(startPos);
-        board.addPiece(endPos, piece);
+        ChessPiece newPiece;
+        if(move.getPromotionPiece() != null){
+            newPiece = new ChessPiece(piece.getTeamColor(), move.getPromotionPiece());
+        } else {
+            newPiece = piece;
+        }
+        board.addPiece(endPos, newPiece);
         if(teamTurn == TeamColor.WHITE) {
             teamTurn = TeamColor.BLACK;
         } else teamTurn = TeamColor.WHITE;
