@@ -18,11 +18,8 @@ public class ChessBoard {
     public ChessBoard(ChessBoard copy){
         board = new ChessPiece[8][8];
         for (int i=0; i< 8; i++) {
-            for (int j=0; j < 8; j++) {
-                board[i][j] = copy.board[i][j];
-            }
+            System.arraycopy(copy.board[i], 0, board[i], 0, 8);
         }
-//        this.board = Arrays.copyOf(copy.board, copy.board.length);
     }
 
     /**
