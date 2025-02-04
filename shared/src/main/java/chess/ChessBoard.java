@@ -17,8 +17,10 @@ public class ChessBoard {
 
     public ChessBoard(ChessBoard copy){
         board = new ChessPiece[8][8];
-        for (int i=0; i< 8; i++) {
-            System.arraycopy(copy.board[i], 0, board[i], 0, 8);
+        for (int i = 0; i < 8; i++) {
+            for (int j=0; j < 8; j++) {
+                this.board[i][j] = copy.getBoard()[i][j];
+            }
         }
     }
 
@@ -55,11 +57,12 @@ public class ChessBoard {
     @Override
     public String toString(){
         StringBuilder boardStr = new StringBuilder();
-        for(ChessPiece[] row : board){
-            for(ChessPiece piece : row){
-                if(piece == null){
+        for (int i = 7; i >= 0; i--) { // Iterate backwards
+            ChessPiece[] row = board[i];
+            for (ChessPiece piece : row) {
+                if (piece == null) {
                     boardStr.append("| ");
-                } else{
+                } else {
                     boardStr.append("|").append(piece);
                 }
             }

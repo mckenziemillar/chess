@@ -90,6 +90,7 @@ public class ChessPiece {
                     case KNIGHT -> pieceStr = "n";
                     case PAWN -> pieceStr = "p";
                 }
+                break;
             case WHITE:
                 switch (pieceType){
                     case KING -> pieceStr = "K";

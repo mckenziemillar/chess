@@ -146,6 +146,7 @@ public class ChessGame {
      */
     public boolean isInCheckmate(TeamColor teamColor) {
         //ChessPosition kingPos = findKingPos(teamColor, board);
+        System.out.println(board.toString());
         if(!isInCheck(teamColor)){
             System.out.println("Not in Check.");
             return false;
@@ -162,7 +163,7 @@ public class ChessGame {
                     possibleMoves = piece.pieceMoves(board, pos);
                     for(ChessMove move : possibleMoves){
                         if(!putsTeamInCheck(board, move, teamColor)){
-                            System.out.println("Move helpful:" + move.getEndPosition().toString() + ".");
+                            System.out.println("Move helpful -> start: " + move.getStartPosition().toString()+ " end: " + move.getEndPosition().toString() + ".");
                             System.out.println("Team Color: " + teamColor);
                             System.out.println(board);
                             return false;
