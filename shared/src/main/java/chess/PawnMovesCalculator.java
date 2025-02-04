@@ -1,68 +1,73 @@
 package chess;
 
-import chess.*;
-
-import java.util.Collection;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 
 public class PawnMovesCalculator implements MovesCalculator{
     public Collection<ChessMove> pieceMoves(ChessBoard board, ChessPosition myPosition){
-        List<ChessMove> moves = new ArrayList<ChessMove>();
-        ChessPiece.PieceType[] promotions = {ChessPiece.PieceType.ROOK, ChessPiece.PieceType.BISHOP, ChessPiece.PieceType.KNIGHT, ChessPiece.PieceType.QUEEN};
-        int colorInt = 1;
-        if(board.getPiece(myPosition).getTeamColor() == ChessGame.TeamColor.BLACK){
-            colorInt = -1;
+        ArrayList<ChessMove> moves = new ArrayList<>();
+        int row = myPosition.getRow();
+        int col = myPosition.getColumn();
+        int colorInt = 0;
+        ChessGame.TeamColor color = board.getPiece(myPosition).getTeamColor();
+        switch(color){
+            case BLACK -> colorInt = -1;
+            case WHITE -> colorInt = 1;
         }
-        for(int i = 0; i < 2; i++){
-            for(int j = -1; j < 2; j++){
-                int newRow = myPosition.getRow() + i*colorInt;
-                int newCol = myPosition.getColumn() + j;
-                ChessPosition newPos = new ChessPosition(newRow, newCol);
-                if(!posIsOnBoard(newPos)){
-                    continue;
-                }
-                if(j != 0){
-                    if(board.getPiece(newPos) == null) {
-                        continue;
-                    }else if(board.getPiece(newPos).getTeamColor() == board.getPiece(myPosition).getTeamColor()){
-                        continue;
-                    }
-                } else {
-                    if(board.getPiece(newPos) != null){
-                        continue;
-                    }
-                }
-                if(posIsOnBoard(newPos)){
-                    if(promotionNeeded(board, myPosition, newPos)){
-                        for(var promo: promotions) {moves.add(new ChessMove(myPosition, newPos, promo));}
-                    } else {
-                        moves.add(new ChessMove(myPosition, newPos, null));
-                    }
+        if(row == 2 && color == ChessGame.TeamColor.WHITE
+                || row == 7 && color == ChessGame.TeamColor.BLACK){
+            ChessPosition pos1 = new ChessPosition(row + (1*colorInt), col);
+            ChessPosition pos2 = new ChessPosition(row + (2*colorInt), col);
+            if(board.getPiece(pos1) == null){
+                moves.add(new ChessMove(myPosition, pos1, null));
+                if(board.getPiece(pos2) == null){
+                    moves.add(new ChessMove(myPosition, pos2, null));
                 }
             }
-        }
-        ChessGame.TeamColor myColor = board.getPiece(myPosition).getTeamColor();
-        if((myColor == ChessGame.TeamColor.WHITE && myPosition.getRow() == 2)||
-                (myColor == ChessGame.TeamColor.BLACK && myPosition.getRow() == 7)){
-            int newRow = myPosition.getRow() + colorInt*2;
-            ChessPosition newPos = new ChessPosition(newRow, myPosition.getColumn());
-            if(board.getPiece(newPos) == null && (board.getPiece(new ChessPosition(newRow - (colorInt), myPosition.getColumn())) == null)) {
-                moves.add(new ChessMove(myPosition, newPos, null));
+        } else {
+            ChessPosition pos = new ChessPosition(row + (1*colorInt), col);
+            if(isOnBoard(pos) && board.getPiece(pos) == null){
+                if(needsPromotion(color, pos)){
+                    for(ChessPiece.PieceType type:ChessPiece.PieceType.values()){
+                        if(type == ChessPiece.PieceType.PAWN || type == ChessPiece.PieceType.KING){
+                            continue;
+                        }
+                        moves.add(new ChessMove(myPosition, pos, type));
+                    }
+                } else { moves.add(new ChessMove(myPosition, pos, null)); }
             }
+        }
+        ChessPosition posA = new ChessPosition(row + (1*colorInt), col + 1);
+        ChessPosition posB = new ChessPosition(row + (1*colorInt), col - 1);
+        if(isOnBoard(posA) && board.getPiece(posA) != null && board.getPiece(posA).getTeamColor() != board.getPiece(myPosition).getTeamColor()){
+            if(needsPromotion(color, posA)){
+                for(ChessPiece.PieceType type:ChessPiece.PieceType.values()){
+                    if(type == ChessPiece.PieceType.PAWN || type == ChessPiece.PieceType.KING){
+                        continue;
+                    }
+                    moves.add(new ChessMove(myPosition, posA, type));
+                }
+            } else { moves.add(new ChessMove(myPosition, posA, null)); }
+
+        }
+        if(isOnBoard(posB) && board.getPiece(posB) != null && board.getPiece(posB).getTeamColor() != board.getPiece(myPosition).getTeamColor()){
+            if(needsPromotion(color, posB)){
+                for(ChessPiece.PieceType type:ChessPiece.PieceType.values()){
+                    if(type == ChessPiece.PieceType.PAWN || type == ChessPiece.PieceType.KING){
+                        continue;
+                    }
+                    moves.add(new ChessMove(myPosition, posB, type));
+                }
+            } else { moves.add(new ChessMove(myPosition, posB, null)); }
         }
         return moves;
     }
 
-    private boolean promotionNeeded(ChessBoard board, ChessPosition myPosition, ChessPosition newPos){
-        return((board.getPiece(myPosition).getTeamColor() == ChessGame.TeamColor.WHITE && newPos.getRow() == 8)
-                || (board.getPiece(myPosition).getTeamColor() == ChessGame.TeamColor.BLACK && newPos.getRow() == 1));
+    private boolean isOnBoard(ChessPosition pos){
+        return (pos.getRow() >= 1 && pos.getRow() <= 8 && pos.getColumn() >= 1 && pos.getColumn() <= 8);
     }
 
-    private boolean posIsOnBoard(ChessPosition pos){
-        int row = pos.getRow();
-        int col = pos.getColumn();
-        return (row >= 1 && row <= 8 && col >=1 && col <= 8);
+    private boolean needsPromotion(ChessGame.TeamColor color, ChessPosition pos){
+        return ((color == ChessGame.TeamColor.WHITE && pos.getRow() == 8) || (color == ChessGame.TeamColor.BLACK && pos.getRow() == 1));
     }
-
 }
