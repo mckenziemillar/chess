@@ -5,10 +5,10 @@ import java.util.Objects;
 
 public record GameData(int gameID, String whiteUsername, String blackUsername, String gameName, ChessGame game) {
     public GameData {
-        if (gameID < 0) {
-            throw new IllegalArgumentException("gameID cannot be negative");
+        if (gameID <= 0) {
+            throw new IllegalArgumentException("gameID cannot be negative or zero");
         }
-        if (whiteUsername == null || blackUsername == null || gameName == null || game == null) {
+        if (/*whiteUsername == null || blackUsername == null || */gameName == null || game == null) {
             throw new IllegalArgumentException("Fields cannot be null");
         }
     }

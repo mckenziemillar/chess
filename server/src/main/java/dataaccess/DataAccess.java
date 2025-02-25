@@ -2,7 +2,7 @@ package dataaccess;
 import model.AuthData;
 import model.UserData;
 import model.GameData;
-
+import java.util.Map;
 import java.util.Collection;
 
 public interface DataAccess {

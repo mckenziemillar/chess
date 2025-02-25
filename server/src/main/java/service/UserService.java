@@ -17,10 +17,9 @@ public class UserService {
     }
 
     public AuthData register(UserData userData) throws DataAccessException {
-        // Implement register logic here
-        // ...
-        if(dataAccess.getUser(userData.username()) != null){
-            throw new DataAccessException("Error: already taken");
+        System.out.println(userData.hashCode());
+            if (dataAccess.getUser(userData.username()) != null) {
+                throw new DataAccessException("Error: already taken");
         }
 
         dataAccess.createUser(userData);
