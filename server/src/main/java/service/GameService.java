@@ -33,7 +33,11 @@ public class GameService {
         return dataAccess.listGames();
     }
 
-    public GameData createGame(String gameName) throws DataAccessException {
+    public GameData createGame(String authToken, String gameName) throws DataAccessException {
+        AuthData authData = authService.getAuth(authToken);
+        if (authData == null) {
+            throw new DataAccessException("Error: unauthorized");
+        }
         int gameID = nextGameID++;
         ChessGame chessGame = new ChessGame();
         GameData gameData = new GameData(gameID, null, null, gameName, chessGame);

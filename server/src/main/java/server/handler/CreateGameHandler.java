@@ -18,11 +18,12 @@ public class CreateGameHandler {
     public Object createGame(Request req, Response res) {
         try {
             CreateGameRequest createGameRequest = gson.fromJson(req.body(), CreateGameRequest.class);
-            GameData gameData = gameService.createGame(createGameRequest.gameName());
+            String authToken = req.headers("Authorization");
+            GameData gameData = gameService.createGame(authToken, createGameRequest.gameName());
             res.status(200);
             return gson.toJson(new CreateGameResult(gameData.gameID()));
         } catch (DataAccessException e) {
-            res.status(500);
+            res.status(401);
             return gson.toJson(new ErrorMessage("Error: " + e.getMessage()));
         }
 
