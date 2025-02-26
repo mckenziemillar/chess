@@ -7,6 +7,7 @@ import server.handler.LoginHandler;
 import server.handler.LogoutHandler;
 import server.handler.ListGamesHandler;
 import dataaccess.MemoryDataAccess;
+import service.ClearService;
 import service.UserService;
 import service.AuthService;
 import service.GameService;
@@ -25,10 +26,11 @@ public class Server {
         UserService userService = new UserService(dataAccess);
         AuthService authService = new AuthService(dataAccess);
         GameService gameService = new GameService(dataAccess);
+        ClearService clearService = new ClearService(dataAccess);
 
         RegisterHandler registerHandler = new RegisterHandler(userService);
         LoginHandler loginHandler = new LoginHandler(authService);
-        ClearHandler clearHandler = new ClearHandler(dataAccess);
+        ClearHandler clearHandler = new ClearHandler(clearService);
         CreateGameHandler createGameHandler = new CreateGameHandler(gameService);
         JoinGameHandler joinGameHandler = new JoinGameHandler(gameService);
         LogoutHandler logoutHandler = new LogoutHandler(authService);

@@ -10,6 +10,10 @@ public class ClearService {
         // Initialize DataAccess (for now, use in-memory)
         this.dataAccess = new MemoryDataAccess();
     }
+    public ClearService(DataAccess dataAccess) {
+        // Initialize DataAccess (for now, use in-memory)
+        this.dataAccess = dataAccess;
+    }
 
     public void clear() throws DataAccessException {
         dataAccess.clear();

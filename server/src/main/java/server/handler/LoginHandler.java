@@ -12,8 +12,8 @@ public class LoginHandler {
     private final AuthService authService;
     private final Gson gson;
 
-    public LoginHandler() {
-        this.authService = new AuthService();
+    public LoginHandler(AuthService authService) {
+        this.authService = authService;
         this.gson = new Gson();
     }
 

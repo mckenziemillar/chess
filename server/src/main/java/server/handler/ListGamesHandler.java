@@ -11,8 +11,8 @@ public class ListGamesHandler {
     private final GameService gameService;
     private final Gson gson;
 
-    public ListGamesHandler() {
-        this.gameService = new GameService();
+    public ListGamesHandler(GameService gameService) {
+        this.gameService = gameService;
         this.gson = new Gson();
     }
 

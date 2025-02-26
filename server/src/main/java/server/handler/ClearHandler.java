@@ -7,8 +7,8 @@ public class ClearHandler {
     private final ClearService clearService;
     private final Gson gson;
 
-    public ClearHandler() {
-        this.clearService = new ClearService();
+    public ClearHandler(ClearService clearService) {
+        this.clearService = clearService;
         this.gson = new Gson();
     }
 

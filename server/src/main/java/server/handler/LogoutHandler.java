@@ -11,8 +11,8 @@ public class LogoutHandler {
     private final AuthService authService;
     private final Gson gson;
 
-    public LogoutHandler() {
-        this.authService = new AuthService();
+    public LogoutHandler(AuthService authService) {
+        this.authService = authService;
         this.gson = new Gson();
     }
 

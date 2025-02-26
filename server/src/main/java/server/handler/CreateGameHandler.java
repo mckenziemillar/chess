@@ -10,8 +10,8 @@ public class CreateGameHandler {
     private final GameService gameService;
     private final Gson gson;
 
-    public CreateGameHandler() {
-        this.gameService = new GameService();
+    public CreateGameHandler(GameService gameService) {
+        this.gameService = gameService;
         this.gson = new Gson();
     }
 

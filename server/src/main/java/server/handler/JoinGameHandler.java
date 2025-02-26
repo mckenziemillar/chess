@@ -9,8 +9,8 @@ public class JoinGameHandler {
     private final GameService gameService;
     private final Gson gson;
 
-    public JoinGameHandler() {
-        this.gameService = new GameService();
+    public JoinGameHandler(GameService gameService) {
+        this.gameService = gameService;
         this.gson = new Gson();
     }
 
