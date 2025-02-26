@@ -11,14 +11,17 @@ import chess.ChessGame;
 import java.util.UUID;
 public class GameService {
     private final DataAccess dataAccess;
+    private final AuthService authService;
     private int nextGameID = 1;
 
     public GameService() {
         this.dataAccess = new MemoryDataAccess();
+        this.authService = new AuthService();
     }
 
     public GameService(DataAccess dataAccess){
         this.dataAccess = dataAccess;
+        this.authService = new AuthService(dataAccess);
     }
 
     public GameData createGame(String gameName) throws DataAccessException {
@@ -30,7 +33,7 @@ public class GameService {
     }
 
     public void joinGame(String authToken, int gameID, String playerColor) throws DataAccessException {
-        AuthData authData = AuthService.getAuth(authToken);
+        AuthData authData = authService.getAuth(authToken);
         if (authData == null) {
             throw new DataAccessException("Error: unauthorized");
         }

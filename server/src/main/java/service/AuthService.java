@@ -35,6 +35,10 @@ public class AuthService {
     }
 
     public void logout(String authToken) throws DataAccessException{
+        AuthData authData = dataAccess.getAuth(authToken);
+        if (authData == null){
+            throw new DataAccessException("Error: unauthorized");
+        }
         dataAccess.deleteAuth(authToken);
     }
 }

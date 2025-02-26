@@ -2,36 +2,34 @@ package server.handler;
 
 import com.google.gson.Gson;
 import dataaccess.DataAccessException;
-import model.AuthData;
 import service.AuthService;
 import spark.Request;
 import spark.Response;
 
-public class LoginHandler {
+public class LogoutHandler {
 
     private final AuthService authService;
     private final Gson gson;
 
-    public LoginHandler() {
+    public LogoutHandler() {
         this.authService = new AuthService();
         this.gson = new Gson();
     }
 
-    public Object login(Request req, Response res) {
+    public Object logout(Request req, Response res) {
         try {
-            LoginRequest loginRequest = gson.fromJson(req.body(), LoginRequest.class);
-            AuthData authData = authService.login(loginRequest.username(), loginRequest.password());
+            String authToken = req.headers("Authorization");
+            authService.logout(authToken);
             res.status(200);
-            return gson.toJson(authData);
+            return "{}"; // Empty JSON object for success
         } catch (DataAccessException e) {
             res.status(401);
             return gson.toJson(new ErrorMessage("Error: unauthorized"));
-        } catch (Exception e) {
+        } catch (Exception e){
             res.status(500);
             return gson.toJson(new ErrorMessage("Error: " + e.getMessage()));
         }
     }
 
-    private record LoginRequest(String username, String password) {}
     private record ErrorMessage(String message) {}
 }
