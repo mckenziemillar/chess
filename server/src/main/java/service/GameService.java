@@ -1,9 +1,11 @@
 package service;
 
+import service.AuthService;
 import dataaccess.DataAccessException;
 import dataaccess.DataAccess;
 import dataaccess.MemoryDataAccess;
 import model.GameData;
+import model.AuthData;
 import chess.ChessGame;
 
 import java.util.UUID;
@@ -25,5 +27,39 @@ public class GameService {
         GameData gameData = new GameData(gameID, null, null, gameName, chessGame);
         dataAccess.createGame(gameData);
         return gameData;
+    }
+
+    public void joinGame(String authToken, int gameID, String playerColor) throws DataAccessException {
+        AuthData authData = AuthService.getAuth(authToken);
+        if (authData == null) {
+            throw new DataAccessException("Error: unauthorized");
+        }
+
+        GameData gameData = dataAccess.getGame(gameID);
+        if (gameData == null) {
+            throw new DataAccessException("Error: bad request");
+        }
+
+        String username = authData.username();
+
+        if (playerColor == null){
+            throw new DataAccessException("Error: bad request");
+        }
+
+        if (playerColor.equalsIgnoreCase("WHITE")) {
+            if (gameData.whiteUsername() != null) {
+                throw new DataAccessException("Error: already taken");
+            }
+            gameData = new GameData(gameData.gameID(), username, gameData.blackUsername(), gameData.gameName(), gameData.game());
+        } else if (playerColor.equalsIgnoreCase("BLACK")) {
+            if (gameData.blackUsername() != null) {
+                throw new DataAccessException("Error: already taken");
+            }
+            gameData = new GameData(gameData.gameID(), gameData.whiteUsername(), username, gameData.gameName(), gameData.game());
+        } else {
+            throw new DataAccessException("Error: bad request");
+        }
+
+        dataAccess.createGame(gameData); // Update the game in storage
     }
 }

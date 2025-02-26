@@ -2,6 +2,7 @@ package server;
 import server.handler.ClearHandler;
 import server.handler.CreateGameHandler;
 import server.handler.RegisterHandler;
+import server.handler.JoinGameHandler;
 import com.google.gson.Gson;
 import spark.*;
 
@@ -18,6 +19,7 @@ public class Server {
         });
         Spark.post("/user", (req, res) -> new RegisterHandler().register(req, res));
         Spark.post("/game", (req, res) -> new CreateGameHandler().createGame(req, res));
+        Spark.put("/game", (req, res) -> new JoinGameHandler().joinGame(req, res));
         Spark.delete("/db", (req, res) -> {
             return new ClearHandler().clear(req, res);
         });

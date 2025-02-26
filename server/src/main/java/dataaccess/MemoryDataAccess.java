@@ -29,6 +29,8 @@ public class MemoryDataAccess implements DataAccess{
     @Override
     public void createAuth(AuthData auth) throws DataAccessException {
         authTokens.put(auth.authToken(), auth);
+        System.out.println("Auth token created: " + auth.authToken());
+        System.out.println("Current authTokens map: " + authTokens);
     }
     @Override
     public void clear() {
@@ -55,7 +57,15 @@ public class MemoryDataAccess implements DataAccess{
 
     @Override
     public AuthData getAuth(String authToken) throws DataAccessException {
-        return authTokens.get(authToken);
+        System.out.println("Attempting to retrieve auth token: " + authToken);
+        System.out.println("Current authTokens map: " + authTokens); // Print the entire map
+        AuthData auth = authTokens.get(authToken);
+        if (auth == null) {
+            System.out.println("Auth token not found.");
+        } else {
+            System.out.println("Auth token found: " + auth.authToken());
+        }
+        return auth;
     }
 
     @Override
