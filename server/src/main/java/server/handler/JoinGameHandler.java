@@ -23,7 +23,7 @@ public class JoinGameHandler {
             return "{}"; // Empty JSON object for success
         } catch (DataAccessException e) {
             if (e.getMessage().equals("Error: unauthorized")) {
-                res.status(400);
+                res.status(401);
             } else if (e.getMessage().equals("Error: bad request")){
                 res.status(400);
             } else if (e.getMessage().equals("Error: already taken")){
