@@ -5,6 +5,12 @@ import server.handler.RegisterHandler;
 import server.handler.JoinGameHandler;
 import server.handler.LoginHandler;
 import server.handler.LogoutHandler;
+import server.handler.ListGamesHandler;
+import dataaccess.MemoryDataAccess;
+import service.UserService;
+import service.AuthService;
+import service.GameService;
+
 import com.google.gson.Gson;
 import spark.*;
 
@@ -15,18 +21,30 @@ public class Server {
 
         Spark.staticFiles.location("web");
 
+        MemoryDataAccess dataAccess = new MemoryDataAccess();
+        UserService userService = new UserService(dataAccess);
+        AuthService authService = new AuthService(dataAccess);
+        GameService gameService = new GameService(dataAccess);
+
+        RegisterHandler registerHandler = new RegisterHandler(userService);
+        LoginHandler loginHandler = new LoginHandler(authService);
+        ClearHandler clearHandler = new ClearHandler(dataAccess);
+        CreateGameHandler createGameHandler = new CreateGameHandler(gameService);
+        JoinGameHandler joinGameHandler = new JoinGameHandler(gameService);
+        LogoutHandler logoutHandler = new LogoutHandler(authService);
+        ListGamesHandler listGamesHandler = new ListGamesHandler(gameService);
+
         // Register your endpoints and handle exceptions here.
         Spark.get("/", (req, res) -> {
             return "Hello, world! ♕ 240 Chess Server is running.";
         });
-        Spark.delete("/db", (req, res) -> {
-            return new ClearHandler().clear(req, res);
-        });
-        Spark.post("/user", (req, res) -> new RegisterHandler().register(req, res));
-        Spark.post("/session", (req, res) -> new LoginHandler().login(req, res));
-        Spark.delete("/session", (req, res) -> new LogoutHandler().logout(req, res));
-        Spark.post("/game", (req, res) -> new CreateGameHandler().createGame(req, res));
-        Spark.put("/game", (req, res) -> new JoinGameHandler().joinGame(req, res));
+        Spark.post("/user", registerHandler::register);
+        Spark.post("/session", loginHandler::login);
+        Spark.delete("/session", logoutHandler::logout);
+        Spark.post("/game", createGameHandler::createGame);
+        Spark.put("/game", joinGameHandler::joinGame);
+        Spark.get("/game", listGamesHandler::listGames);
+        Spark.delete("/db", clearHandler::clear);
 
 
         //This line initializes the server and can be removed once you have a functioning endpoint 

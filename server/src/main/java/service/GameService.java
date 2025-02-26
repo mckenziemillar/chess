@@ -8,6 +8,7 @@ import model.GameData;
 import model.AuthData;
 import chess.ChessGame;
 
+import java.util.Collection;
 import java.util.UUID;
 public class GameService {
     private final DataAccess dataAccess;
@@ -22,6 +23,14 @@ public class GameService {
     public GameService(DataAccess dataAccess){
         this.dataAccess = dataAccess;
         this.authService = new AuthService(dataAccess);
+    }
+
+    public Collection<GameData> listGames(String authToken) throws DataAccessException {
+        AuthData authData = authService.getAuth(authToken);
+        if (authData == null) {
+            throw new DataAccessException("Error: unauthorized");
+        }
+        return dataAccess.listGames();
     }
 
     public GameData createGame(String gameName) throws DataAccessException {

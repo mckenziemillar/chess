@@ -18,11 +18,21 @@ public class MemoryDataAccess implements DataAccess{
     @Override
     public void createUser(UserData user) throws DataAccessException {
         users.put(user.username(), user);
+        System.out.println("User created: " + user.username());
+        System.out.println("Current users map: " + users);
     }
 
     @Override
     public UserData getUser(String username) throws DataAccessException {
-        return users.get(username);
+        System.out.println("Attempting to retrieve user: " + username);
+        System.out.println("Current users map: " + users);
+        UserData userData = users.get(username);
+        if(userData == null){
+            System.out.println("User not found");
+        } else {
+            System.out.println("User found: " + userData.username());
+        }
+        return userData;
     }
 
 

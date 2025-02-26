@@ -10,8 +10,8 @@ public class RegisterHandler {
     private final UserService userService;
     private final Gson gson;
 
-    public RegisterHandler() {
-        this.userService = new UserService();
+    public RegisterHandler(UserService userService) {
+        this.userService = userService;
         this.gson = new Gson();
     }
 
