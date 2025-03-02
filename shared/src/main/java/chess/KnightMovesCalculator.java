@@ -50,12 +50,4 @@ public class KnightMovesCalculator implements MovesCalculator{
         }
         return moves;
     }
-
-
-    /*private boolean posIsOnBoard(ChessPosition pos){
-        int row = pos.getRow();
-        int col = pos.getColumn();
-        return (row >= 1 && row <= 8 && col >=1 && col <= 8);
-    }*/
-
 }

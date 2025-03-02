@@ -164,7 +164,8 @@ public class ChessGame {
                     possibleMoves = piece.pieceMoves(board, pos);
                     for(ChessMove move : possibleMoves){
                         if(!putsTeamInCheck(board, move, teamColor)){
-                            System.out.println("Move helpful -> start: " + move.getStartPosition().toString()+ " end: " + move.getEndPosition().toString() + ".");
+                            System.out.println("Move helpful -> start: " + move.getStartPosition().toString()
+                                    + " end: " + move.getEndPosition().toString() + ".");
                             System.out.println("Team Color: " + teamColor);
                             System.out.println(board);
                             return false;
