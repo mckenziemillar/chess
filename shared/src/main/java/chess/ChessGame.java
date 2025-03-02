@@ -92,7 +92,9 @@ public class ChessGame {
         board.addPiece(endPos, newPiece);
         if(teamTurn == TeamColor.WHITE) {
             teamTurn = TeamColor.BLACK;
-        } else teamTurn = TeamColor.WHITE;
+        } else {
+            teamTurn = TeamColor.WHITE;
+        }
     }
 
     /**

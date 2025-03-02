@@ -173,12 +173,16 @@ public class ChessBoard {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true; // Check if the objects are the same instance
-        if (/*obj == null || */getClass() != obj.getClass()) return false; // Check if the object is null or of a different class
+        if (this == obj){
+            return true;
+        }
+        if (getClass() != obj.getClass()){
+            return false;
+        }
 
-        ChessBoard that = (ChessBoard) obj; // Cast the object to ChessBoard
+        ChessBoard that = (ChessBoard) obj;
 
-        // Compare the two boards element by element
+
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 ChessPiece thisPiece = this.board[i][j];
