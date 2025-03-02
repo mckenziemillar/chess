@@ -16,7 +16,7 @@ public class PawnMovesCalculator implements MovesCalculator{
         }
         if(row == 2 && color == ChessGame.TeamColor.WHITE
                 || row == 7 && color == ChessGame.TeamColor.BLACK){
-            ChessPosition pos1 = new ChessPosition(row + (1*colorInt), col);
+            ChessPosition pos1 = new ChessPosition(row + (colorInt), col);
             ChessPosition pos2 = new ChessPosition(row + (2*colorInt), col);
             if(board.getPiece(pos1) == null){
                 moves.add(new ChessMove(myPosition, pos1, null));
@@ -25,8 +25,8 @@ public class PawnMovesCalculator implements MovesCalculator{
                 }
             }
         } else {
-            ChessPosition pos = new ChessPosition(row + (1*colorInt), col);
-            if(isOnBoard(pos) && board.getPiece(pos) == null){
+            ChessPosition pos = new ChessPosition(row + (colorInt), col);
+            if(MoveCalculatorHelper.posIsOnBoard(pos) && board.getPiece(pos) == null){
                 if(needsPromotion(color, pos)){
                     for(ChessPiece.PieceType type:ChessPiece.PieceType.values()){
                         if(type == ChessPiece.PieceType.PAWN || type == ChessPiece.PieceType.KING){
@@ -37,9 +37,9 @@ public class PawnMovesCalculator implements MovesCalculator{
                 } else { moves.add(new ChessMove(myPosition, pos, null)); }
             }
         }
-        ChessPosition posA = new ChessPosition(row + (1*colorInt), col + 1);
-        ChessPosition posB = new ChessPosition(row + (1*colorInt), col - 1);
-        if(isOnBoard(posA) && board.getPiece(posA) != null && board.getPiece(posA).getTeamColor() != board.getPiece(myPosition).getTeamColor()){
+        ChessPosition posA = new ChessPosition(row + (colorInt), col + 1);
+        ChessPosition posB = new ChessPosition(row + (colorInt), col - 1);
+        if(MoveCalculatorHelper.posIsOnBoard(posA) && board.getPiece(posA) != null && board.getPiece(posA).getTeamColor() != board.getPiece(myPosition).getTeamColor()){
             if(needsPromotion(color, posA)){
                 for(ChessPiece.PieceType type:ChessPiece.PieceType.values()){
                     if(type == ChessPiece.PieceType.PAWN || type == ChessPiece.PieceType.KING){
@@ -50,7 +50,7 @@ public class PawnMovesCalculator implements MovesCalculator{
             } else { moves.add(new ChessMove(myPosition, posA, null)); }
 
         }
-        if(isOnBoard(posB) && board.getPiece(posB) != null && board.getPiece(posB).getTeamColor() != board.getPiece(myPosition).getTeamColor()){
+        if(MoveCalculatorHelper.posIsOnBoard(posB) && board.getPiece(posB) != null && board.getPiece(posB).getTeamColor() != board.getPiece(myPosition).getTeamColor()){
             if(needsPromotion(color, posB)){
                 for(ChessPiece.PieceType type:ChessPiece.PieceType.values()){
                     if(type == ChessPiece.PieceType.PAWN || type == ChessPiece.PieceType.KING){
@@ -61,10 +61,6 @@ public class PawnMovesCalculator implements MovesCalculator{
             } else { moves.add(new ChessMove(myPosition, posB, null)); }
         }
         return moves;
-    }
-
-    private boolean isOnBoard(ChessPosition pos){
-        return (pos.getRow() >= 1 && pos.getRow() <= 8 && pos.getColumn() >= 1 && pos.getColumn() <= 8);
     }
 
     private boolean needsPromotion(ChessGame.TeamColor color, ChessPosition pos){

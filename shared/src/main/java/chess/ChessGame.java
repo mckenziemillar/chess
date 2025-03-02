@@ -145,7 +145,6 @@ public class ChessGame {
      * @return True if the specified team is in checkmate
      */
     public boolean isInCheckmate(TeamColor teamColor) {
-        //ChessPosition kingPos = findKingPos(teamColor, board);
         System.out.println(board.toString());
         if(!isInCheck(teamColor)){
             System.out.println("Not in Check.");
@@ -189,12 +188,6 @@ public class ChessGame {
         if(isInCheck(teamColor)) {
             return false;
         }
-        /*Collection<ChessMove> kingMoves = board.getPiece(kingPos).pieceMoves(board, kingPos);
-        for(ChessMove move : kingMoves){
-            if(!putsTeamInCheck(move)){
-                return false;
-            }
-        }*/
         Collection<ChessMove> possibleMoves;
         for(int r = 1; r <= 8; r++){
             for(int c = 1; c <= 8; c++){

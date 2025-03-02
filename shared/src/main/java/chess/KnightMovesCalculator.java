@@ -1,16 +1,10 @@
 package chess;
-
-import chess.ChessBoard;
-import chess.ChessMove;
-import chess.ChessPiece;
-import chess.ChessPosition;
 import java.util.Collection;
 import java.util.ArrayList;
-import java.util.List;
 
 public class KnightMovesCalculator implements MovesCalculator{
     public Collection<ChessMove> pieceMoves(ChessBoard board, ChessPosition myPosition){
-        List<ChessMove> moves = new ArrayList<ChessMove>();
+        Collection<ChessMove> moves = new ArrayList<ChessMove>();
         for(int j = 0; j < 8; j++){
             int newRow = myPosition.getRow();
             int newCol = myPosition.getColumn();
@@ -40,7 +34,7 @@ public class KnightMovesCalculator implements MovesCalculator{
                 newCol -= 2;
             }
             ChessPosition newPos = new ChessPosition(newRow, newCol);
-            if(!posIsOnBoard(newPos)){
+            if(!(MoveCalculatorHelper.posIsOnBoard(newPos))){
                 continue;
             }
             ChessPiece otherPiece = board.getPiece(new ChessPosition(newRow, newCol));
@@ -58,10 +52,10 @@ public class KnightMovesCalculator implements MovesCalculator{
     }
 
 
-    private boolean posIsOnBoard(ChessPosition pos){
+    /*private boolean posIsOnBoard(ChessPosition pos){
         int row = pos.getRow();
         int col = pos.getColumn();
         return (row >= 1 && row <= 8 && col >=1 && col <= 8);
-    }
+    }*/
 
 }

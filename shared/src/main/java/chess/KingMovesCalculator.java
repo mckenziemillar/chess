@@ -1,8 +1,5 @@
 package chess;
 
-import chess.ChessBoard;
-import chess.ChessMove;
-import chess.ChessPosition;
 import java.util.Collection;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +13,7 @@ public class KingMovesCalculator implements MovesCalculator{
                 int newRow = myPosition.getRow() + i;
                 int newCol = myPosition.getColumn() + j;
                 ChessPosition newPos = new ChessPosition(newRow, newCol);
-                if(!posIsOnBoard(newPos) || (board.getPiece(newPos) != null
+                if(!MoveCalculatorHelper.posIsOnBoard(newPos) || (board.getPiece(newPos) != null
                         && board.getPiece(newPos).getTeamColor() == board.getPiece(myPosition).getTeamColor())){
                     continue;
                 } else {
@@ -25,12 +22,6 @@ public class KingMovesCalculator implements MovesCalculator{
             }
         }
         return moves;
-    }
-
-    private boolean posIsOnBoard(ChessPosition pos){
-        int row = pos.getRow();
-        int col = pos.getColumn();
-        return (row >= 1 && row <= 8 && col >=1 && col <= 8);
     }
 
 }
