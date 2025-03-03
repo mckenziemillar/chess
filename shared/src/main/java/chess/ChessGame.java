@@ -153,11 +153,23 @@ public class ChessGame {
      * @return True if the specified team is in checkmate
      */
     public boolean isInCheckmate(TeamColor teamColor) {
-        if(!isInCheck(teamColor)){
-            return false;
-        }
-        for(int r = 1; r <= 8; r++){
-            for(int c = 1; c <= 8; c++){
+        return isTeamWithoutMoves(teamColor);
+    }
+
+    /**
+     * Determines if the given team is in stalemate, which here is defined as having
+     * no valid moves
+     *
+     * @param teamColor which team to check for stalemate
+     * @return True if the specified team is in stalemate, otherwise false
+     */
+    public boolean isInStalemate(TeamColor teamColor) {
+        return !isInCheck(teamColor) && isTeamWithoutMoves(teamColor);
+    }
+
+    private boolean isTeamWithoutMoves(TeamColor teamColor) {
+        for (int r = 1; r <= 8; r++) {
+            for (int c = 1; c <= 8; c++) {
                 ChessPosition pos = new ChessPosition(r, c);
                 if (hasValidMove(board, pos, teamColor)) {
                     return false;
@@ -178,29 +190,6 @@ public class ChessGame {
             }
         }
         return false;
-    }
-
-    /**
-     * Determines if the given team is in stalemate, which here is defined as having
-     * no valid moves
-     *
-     * @param teamColor which team to check for stalemate
-     * @return True if the specified team is in stalemate, otherwise false
-     */
-    public boolean isInStalemate(TeamColor teamColor) {
-        ChessPosition kingPos = findKingPos(teamColor, board);
-        if(isInCheck(teamColor)) {
-            return false;
-        }
-        for(int r = 1; r <= 8; r++){
-            for(int c = 1; c <= 8; c++){
-                ChessPosition pos = new ChessPosition(r, c);
-                if (hasValidMove(board, pos, teamColor)) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 
     /**

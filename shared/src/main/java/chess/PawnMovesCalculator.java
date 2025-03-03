@@ -18,7 +18,8 @@ public class PawnMovesCalculator implements MovesCalculator {
         return moves;
     }
 
-    private void addForwardMoves(ChessBoard board, ChessPosition myPosition, ArrayList<ChessMove> moves, int row, int col, int colorInt, ChessGame.TeamColor color) {
+    private void addForwardMoves(ChessBoard board, ChessPosition myPosition, ArrayList<ChessMove> moves,
+                                 int row, int col, int colorInt, ChessGame.TeamColor color) {
         if ((row == 2 && color == ChessGame.TeamColor.WHITE) || (row == 7 && color == ChessGame.TeamColor.BLACK)) {
             addInitialDoubleMove(board, myPosition, moves, row, col, colorInt);
         } else {
@@ -26,12 +27,14 @@ public class PawnMovesCalculator implements MovesCalculator {
         }
     }
 
-    private void addCaptureMoves(ChessBoard board, ChessPosition myPosition, ArrayList<ChessMove> moves, int row, int col, int colorInt, ChessGame.TeamColor color) {
+    private void addCaptureMoves(ChessBoard board, ChessPosition myPosition, ArrayList<ChessMove> moves,
+                                 int row, int col, int colorInt, ChessGame.TeamColor color) {
         addCaptureMove(board, myPosition, moves, row, col + 1, colorInt, color);
         addCaptureMove(board, myPosition, moves, row, col - 1, colorInt, color);
     }
 
-    private void addInitialDoubleMove(ChessBoard board, ChessPosition myPosition, ArrayList<ChessMove> moves, int row, int col, int colorInt) {
+    private void addInitialDoubleMove(ChessBoard board, ChessPosition myPosition, ArrayList<ChessMove> moves,
+                                      int row, int col, int colorInt) {
         ChessPosition pos1 = new ChessPosition(row + colorInt, col);
         ChessPosition pos2 = new ChessPosition(row + (2 * colorInt), col);
         if (board.getPiece(pos1) == null) {
@@ -42,7 +45,8 @@ public class PawnMovesCalculator implements MovesCalculator {
         }
     }
 
-    private void addSingleForwardMove(ChessBoard board, ChessPosition myPosition, ArrayList<ChessMove> moves, int row, int col, int colorInt, ChessGame.TeamColor color) {
+    private void addSingleForwardMove(ChessBoard board, ChessPosition myPosition, ArrayList<ChessMove> moves,
+                                      int row, int col, int colorInt, ChessGame.TeamColor color) {
         ChessPosition pos = new ChessPosition(row + colorInt, col);
         if (MoveCalculatorHelper.posIsOnBoard(pos) && board.getPiece(pos) == null) {
             if (needsPromotion(color, pos)) {
@@ -53,7 +57,8 @@ public class PawnMovesCalculator implements MovesCalculator {
         }
     }
 
-    private void addCaptureMove(ChessBoard board, ChessPosition myPosition, ArrayList<ChessMove> moves, int row, int col, int colorInt, ChessGame.TeamColor color) {
+    private void addCaptureMove(ChessBoard board, ChessPosition myPosition, ArrayList<ChessMove> moves,
+                                int row, int col, int colorInt, ChessGame.TeamColor color) {
         ChessPosition pos = new ChessPosition(row + colorInt, col);
         if (MoveCalculatorHelper.posIsOnBoard(pos) && board.getPiece(pos) != null &&
                 board.getPiece(pos).getTeamColor() != board.getPiece(myPosition).getTeamColor()) {
@@ -74,6 +79,7 @@ public class PawnMovesCalculator implements MovesCalculator {
     }
 
     private boolean needsPromotion(ChessGame.TeamColor color, ChessPosition pos) {
-        return (color == ChessGame.TeamColor.WHITE && pos.getRow() == 8) || (color == ChessGame.TeamColor.BLACK && pos.getRow() == 1);
+        return (color == ChessGame.TeamColor.WHITE && pos.getRow() == 8) ||
+                (color == ChessGame.TeamColor.BLACK && pos.getRow() == 1);
     }
 }
