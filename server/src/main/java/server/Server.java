@@ -12,7 +12,6 @@ import service.UserService;
 import service.AuthService;
 import service.GameService;
 
-import com.google.gson.Gson;
 import spark.*;
 
 public class Server {
