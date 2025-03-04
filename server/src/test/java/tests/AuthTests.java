@@ -1,4 +1,4 @@
-package service.tests;
+package tests;
 
 import dataaccess.DataAccessException;
 import model.AuthData;
@@ -32,11 +32,11 @@ class AuthTests {
     void getAuthValidAuthTokenReturnsAuthData() throws DataAccessException {
         String authToken = "validAuthToken";
         AuthData authData = new AuthData(authToken, "testUser");
-        testDataAccess.createAuth(authData);
+        var expected = testDataAccess.createAuth(authData);
 
-        AuthData result = authService.getAuth(authToken);
+        AuthData result = authService.getAuth(expected.authToken());
 
-        assertEquals(authData, result);
+        assertEquals(expected, result);
     }
 
     @Test
@@ -66,11 +66,11 @@ class AuthTests {
     void logoutValidAuthTokenDeletesAuthData() throws DataAccessException {
         String authToken = "validAuthToken";
         AuthData authData = new AuthData(authToken, "testUser");
-        testDataAccess.createAuth(authData);
+        authData = testDataAccess.createAuth(authData);
 
-        authService.logout(authToken);
+        authService.logout(authData.authToken());
 
-        assertNull(testDataAccess.getAuth(authToken));
+        assertNull(testDataAccess.getAuth(authData.authToken()));
     }
 
     @Test

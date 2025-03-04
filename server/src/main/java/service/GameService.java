@@ -20,9 +20,9 @@ public class GameService {
         this.authService = new AuthService();
     }
 
-    public GameService(DataAccess dataAccess){
+    public GameService(DataAccess dataAccess, AuthService authService){
         this.dataAccess = dataAccess;
-        this.authService = new AuthService(dataAccess);
+        this.authService = authService;
     }
 
     public Collection<GameData> listGames(String authToken) throws DataAccessException {

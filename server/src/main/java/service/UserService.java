@@ -25,7 +25,7 @@ public class UserService {
         dataAccess.createUser(userData);
         String authToken = UUID.randomUUID().toString();
         AuthData authData = new AuthData(authToken, userData.username());
-        dataAccess.createAuth(authData);
+        authData=dataAccess.createAuth(authData);
 
         return authData;
     }
