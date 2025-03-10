@@ -1,64 +1,62 @@
-package service.tests;
+package tests;
 
-import dataaccess.DataAccessException;
-import dataaccess.DataAccess;
+import dataaccess.*;
+import dataaccess.daoclasses.*;
 import model.AuthData;
 import model.GameData;
 import model.UserData;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
 public class TestDataAccess implements DataAccess {
-    Map<String, UserData> users = new HashMap<>();
-    Map<String, AuthData> auths = new HashMap<>();
-    Map<Integer, GameData> games = new HashMap<>();
+    private final UserDataDAO userDataDAO = new MemoryUserDataDAO();
+    private final AuthDataDAO authDataDAO = new MemoryAuthDataDAO();
+    private final GameDataDAO gameDataDAO = new MemoryGameDataDAO();
 
     @Override
     public void clear() throws DataAccessException {
-        users.clear();
-        auths.clear();
-        games.clear();
+        ((MemoryUserDataDAO) userDataDAO).clear();
+        ((MemoryAuthDataDAO) authDataDAO).clear();
+        ((MemoryGameDataDAO) gameDataDAO).clear();
     }
 
     @Override
     public void createUser(UserData user) throws DataAccessException {
-        users.put(user.username(), user);
+        userDataDAO.createUser(user);
     }
 
     @Override
     public UserData getUser(String username) throws DataAccessException {
-        return users.get(username);
+        return userDataDAO.getUser(username);
     }
 
     @Override
-    public void createAuth(AuthData auth) throws DataAccessException {
-        auths.put(auth.authToken(), auth);
+    public AuthData createAuth(AuthData auth) throws DataAccessException {
+        return authDataDAO.createAuth(auth);
     }
 
     @Override
     public AuthData getAuth(String authToken) throws DataAccessException {
-        return auths.get(authToken);
+        return authDataDAO.getAuth(authToken);
     }
 
     @Override
     public void deleteAuth(String authToken) throws DataAccessException {
-        auths.remove(authToken);
+        authDataDAO.deleteAuth(authToken);
     }
 
     @Override
     public void createGame(GameData game) throws DataAccessException {
-        games.put(game.gameID(), game);
+        gameDataDAO.createGame(game);
     }
 
     @Override
     public GameData getGame(int gameID) throws DataAccessException {
-        return games.get(gameID);
+        return gameDataDAO.getGame(gameID);
     }
 
     @Override
     public Collection<GameData> listGames() throws DataAccessException {
-        return games.values();
+        return gameDataDAO.listGames();
     }
 }

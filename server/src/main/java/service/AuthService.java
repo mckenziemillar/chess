@@ -26,7 +26,7 @@ public class AuthService {
 
         String authToken = UUID.randomUUID().toString();
         AuthData authData = new AuthData(authToken, username);
-        dataAccess.createAuth(authData);
+        authData = dataAccess.createAuth(authData);
         return authData;
     }
 

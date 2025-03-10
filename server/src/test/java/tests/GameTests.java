@@ -1,4 +1,4 @@
-package service.tests;
+package tests;
 
 import chess.ChessGame;
 import dataaccess.DataAccessException;
@@ -8,7 +8,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import service.AuthService;
 import service.GameService;
-import service.tests.TestDataAccess;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -25,7 +24,7 @@ class GameTests {
     void setUp() {
         testDataAccess = new TestDataAccess();
         authService = new AuthService(testDataAccess);
-        gameService = new GameService(testDataAccess);
+        gameService = new GameService(testDataAccess, authService);
     }
 
     @Test
@@ -142,8 +141,7 @@ class GameTests {
 
     private String createAuthToken(String username) throws DataAccessException {
         AuthData authData = new AuthData(UUID.randomUUID().toString(), username);
-        testDataAccess.createAuth(authData);
-        return authData.authToken();
+        return testDataAccess.createAuth(authData).authToken();
     }
 
     private GameData createGameData(int gameID, String gameName) {

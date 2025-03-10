@@ -4,82 +4,71 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import dataaccess.daoclasses.AuthDataDAO;
+import dataaccess.daoclasses.GameDataDAO;
+import dataaccess.daoclasses.UserDataDAO;
+import dataaccess.MemoryAuthDataDAO;
+import dataaccess.MemoryGameDataDAO;
+import dataaccess.MemoryUserDataDAO;
+
 import model.UserData;
 import model.AuthData;
 import model.GameData;
 
 public class MemoryDataAccess implements DataAccess{
-    private final Map<String, UserData> users = new HashMap<>();
-    private final Map<String, AuthData> authTokens = new HashMap<>();
-    private final Map<Integer, GameData> games = new HashMap<>();
-    private int nextGameID = 1;
+    private final UserDataDAO userDataDAO = new MemoryUserDataDAO();
+    private final AuthDataDAO authDataDAO = new MemoryAuthDataDAO();
+    private final GameDataDAO gameDataDAO = new MemoryGameDataDAO();
 
 
     @Override
     public void createUser(UserData user) throws DataAccessException {
-        users.put(user.username(), user);
-        System.out.println("User created: " + user.username());
-        System.out.println("Current users map: " + users);
+        userDataDAO.createUser(user);
     }
 
     @Override
     public UserData getUser(String username) throws DataAccessException {
-        System.out.println("Attempting to retrieve user: " + username);
-        System.out.println("Current users map: " + users);
-        UserData userData = users.get(username);
-        if(userData == null){
-            System.out.println("User not found");
-        } else {
-            System.out.println("User found: " + userData.username());
-        }
-        return userData;
+        return userDataDAO.getUser(username);
     }
 
 
     @Override
-    public void createAuth(AuthData auth) throws DataAccessException {
-        authTokens.put(auth.authToken(), auth);
-        System.out.println("Auth token created: " + auth.authToken());
-        System.out.println("Current authTokens map: " + authTokens);
+    public AuthData createAuth(AuthData auth) throws DataAccessException {
+        return authDataDAO.createAuth(auth);
     }
     @Override
     public void clear() {
-        users.clear();
-        authTokens.clear();
-        games.clear();
-        nextGameID = 1;
+        MemoryAuthDataDAO tempAuth = (MemoryAuthDataDAO) authDataDAO;
+        tempAuth.clear();
+        MemoryGameDataDAO tempGame = (MemoryGameDataDAO) gameDataDAO;
+        tempGame.clear();
+        MemoryUserDataDAO tempUser = (MemoryUserDataDAO) userDataDAO;
+        tempUser.clear();
     }
 
     @Override
     public void createGame(GameData game) throws DataAccessException {
-        games.put(game.gameID(), game);
+        gameDataDAO.createGame(game);
     }
 
     @Override
     public GameData getGame(int gameID) throws DataAccessException {
-        return games.get(gameID);
+        return gameDataDAO.getGame(gameID);
     }
 
     @Override
     public Collection<GameData> listGames() throws DataAccessException {
-        return new ArrayList<>(games.values());
+        return gameDataDAO.listGames();
     }
 
     @Override
     public AuthData getAuth(String authToken) throws DataAccessException {
-        System.out.println("Attempting to retrieve auth token: " + authToken);
-        System.out.println("Current authTokens map: " + authTokens); // Print the entire map
-        AuthData auth = authTokens.get(authToken);
-        if (auth == null) {
-            System.out.println("Auth token not found.");
-        } else {
-            System.out.println("Auth token found: " + auth.authToken());
-        }
-        return auth;
+        return authDataDAO.getAuth(authToken);
     }
 
     @Override
     public void deleteAuth(String authToken) throws DataAccessException {
-        authTokens.remove(authToken);
+        authDataDAO.deleteAuth(authToken);
     }
+
 }
