@@ -17,16 +17,6 @@ import spark.*;
 
 public class Server {
 
-//    public static void main(String[] args) {
-//        try {
-//            DatabaseManager.createDatabase();
-//            // ... rest of your server startup code ...
-//        } catch (DataAccessException e) {
-//            System.err.println("Database creation failed: " + e.getMessage());
-//            e.printStackTrace();
-//        }
-//    }
-
     public int run(int desiredPort) {
         Spark.port(desiredPort);
 
