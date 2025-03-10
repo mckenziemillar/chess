@@ -1,4 +1,5 @@
 package server;
+import dataaccess.DataAccessException;
 import server.handler.ClearHandler;
 import server.handler.CreateGameHandler;
 import server.handler.RegisterHandler;
@@ -11,10 +12,20 @@ import service.ClearService;
 import service.UserService;
 import service.AuthService;
 import service.GameService;
-
+import dataaccess.DatabaseManager;
 import spark.*;
 
 public class Server {
+
+//    public static void main(String[] args) {
+//        try {
+//            DatabaseManager.createDatabase();
+//            // ... rest of your server startup code ...
+//        } catch (DataAccessException e) {
+//            System.err.println("Database creation failed: " + e.getMessage());
+//            e.printStackTrace();
+//        }
+//    }
 
     public int run(int desiredPort) {
         Spark.port(desiredPort);
