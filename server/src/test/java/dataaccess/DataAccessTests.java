@@ -77,34 +77,52 @@ public class DataAccessTests {
     // getAuth Tests
     @Test
     void getAuth_positive() throws DataAccessException {
-
+        AuthData auth = new AuthData(UUID.randomUUID().toString(), "testUser");
+        dataAccess.createUser(new UserData("testUser", "pass", "test@test.com"));
+        dataAccess.createAuth(auth);
+        AuthData retrievedAuth = dataAccess.getAuth(auth.authToken());
+        assertNotNull(retrievedAuth);
+        assertEquals(auth.authToken(), retrievedAuth.authToken());
     }
 
     @Test
     void getAuth_negative_authNotFound() throws DataAccessException {
-
+        AuthData retrievedAuth = dataAccess.getAuth("nonExistentAuth");
+        assertNull(retrievedAuth);
     }
 
-    // deleteAuth Tests
     @Test
     void deleteAuth_positive() throws DataAccessException {
-
+        AuthData auth = new AuthData(UUID.randomUUID().toString(), "testUser");
+        dataAccess.createUser(new UserData("testUser", "pass", "test@test.com"));
+        dataAccess.createAuth(auth);
+        dataAccess.deleteAuth(auth.authToken());
+        AuthData retrievedAuth = dataAccess.getAuth(auth.authToken());
+        assertNull(retrievedAuth);
     }
 
     @Test
     void deleteAuth_negative_authNotFound() throws DataAccessException {
-
+        assertDoesNotThrow(() -> dataAccess.deleteAuth("nonExistentAuth"));
     }
 
-    // createGame Tests
     @Test
     void createGame_positive() throws DataAccessException {
-
+        ChessGame chessGame = new ChessGame();
+        GameData game = new GameData(1, "whiteUser", "blackUser", "testGame", chessGame);
+        dataAccess.createUser(new UserData("whiteUser", "pass", "white@test.com"));
+        dataAccess.createUser(new UserData("blackUser", "pass", "black@test.com"));
+        dataAccess.createGame(game.gameName());
+        GameData retrievedGame = dataAccess.getGame(1);
+        assertNotNull(retrievedGame);
+        assertEquals(game.gameName(), retrievedGame.gameName());
     }
 
     @Test
     void createGame_negative_userNotFound() {
-
+        ChessGame chessGame = new ChessGame();
+        GameData game = new GameData(1, "nonExistentUser", "blackUser", "testGame", chessGame);
+        assertThrows(DataAccessException.class, () -> dataAccess.createGame(game.gameName()));
     }
 
     // getGame Tests

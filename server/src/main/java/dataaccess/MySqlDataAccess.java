@@ -103,7 +103,14 @@ public class MySqlDataAccess implements DataAccess{
 
     @Override
     public void deleteAuth(String authToken) throws DataAccessException {
-
+        String sql = "DELETE FROM AuthTokens WHERE authToken = ?";
+        try (var conn = DatabaseManager.getConnection();
+             var preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setString(1, authToken);
+            preparedStatement.executeUpdate();
+        } catch (SQLException ex) {
+            throw new DataAccessException(String.format("Unable to delete auth: %s", ex.getMessage()));
+        }
     }
 
     @Override
@@ -149,7 +156,21 @@ public class MySqlDataAccess implements DataAccess{
 
     @Override
     public GameData getGame(int gameID) throws DataAccessException {
-        return null;
+        String sql = "SELECT * FROM Games WHERE gameID = ?";
+        try (var conn = DatabaseManager.getConnection();
+             var preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setInt(1, gameID);
+            try (var resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    Gson gson = new Gson();
+                    return new GameData(resultSet.getInt("gameID"), resultSet.getString("whiteUsername"), resultSet.getString("blackUsername"), resultSet.getString("gameName"), gson.fromJson(resultSet.getString("gameData"), chess.ChessGame.class));
+                } else {
+                    return null;
+                }
+            }
+        } catch (SQLException ex) {
+            throw new DataAccessException(String.format("Unable to get game: %s", ex.getMessage()));
+        }
     }
 
     @Override
