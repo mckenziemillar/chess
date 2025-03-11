@@ -115,7 +115,19 @@ public class DataAccessTests {
     // listGames Tests
     @Test
     void listGames_positive() throws DataAccessException {
-
+        ChessGame chessGame1 = new ChessGame();
+        ChessGame chessGame2 = new ChessGame();
+        GameData game1 = new GameData(1, "whiteUser1", "blackUser1", "game1", chessGame1);
+        GameData game2 = new GameData(2, "whiteUser2", "blackUser2", "game2", chessGame2);
+        dataAccess.createUser(new UserData("whiteUser1", "pass", "white1@test.com"));
+        dataAccess.createUser(new UserData("blackUser1", "pass", "black1@test.com"));
+        dataAccess.createUser(new UserData("whiteUser2", "pass", "white2@test.com"));
+        dataAccess.createUser(new UserData("blackUser2", "pass", "black2@test.com"));
+        dataAccess.createGame(game1.gameName());
+        dataAccess.createGame(game2.gameName());
+        Collection<GameData> games = dataAccess.listGames();
+        assertNotNull(games);
+        assertEquals(2, games.size());
     }
 
     // clear Test
