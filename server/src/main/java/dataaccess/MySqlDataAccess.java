@@ -4,24 +4,33 @@ import com.google.gson.Gson;
 import model.AuthData;
 import model.GameData;
 import model.UserData;
+import chess.ChessGame;
 
 import java.sql.SQLException;
 import java.util.Collection;
 
 public class MySqlDataAccess implements DataAccess{
-
+    private int gameId = 1;
     public MySqlDataAccess() throws DataAccessException {
         configureDatabase();
+        //generate the tables if they don't exist
+        //createTableIfNotExist
     }
     @Override
     public void clear() throws DataAccessException {
         try (var conn = DatabaseManager.getConnection();
-             var preparedStatement = conn.prepareStatement("TRUNCATE TABLE Users");
-             var preparedStatement2 = conn.prepareStatement("TRUNCATE TABLE AuthTokens");
-             var preparedStatement3 = conn.prepareStatement("TRUNCATE TABLE Games")) {
-            preparedStatement.executeUpdate();
-            preparedStatement2.executeUpdate();
-            preparedStatement3.executeUpdate();
+             var statement = conn.createStatement()) {
+            // Disable foreign key checks
+            statement.execute("SET FOREIGN_KEY_CHECKS = 0");
+
+            // Truncate tables
+            statement.execute("TRUNCATE TABLE AuthTokens");
+            statement.execute("TRUNCATE TABLE Games");
+            statement.execute("TRUNCATE TABLE Users");
+
+            // Re-enable foreign key checks
+            statement.execute("SET FOREIGN_KEY_CHECKS = 1");
+
         } catch (SQLException ex) {
             throw new DataAccessException(String.format("Unable to clear database: %s", ex.getMessage()));
         }
@@ -47,8 +56,8 @@ public class MySqlDataAccess implements DataAccess{
     }
 
     @Override
-    public void createAuth(AuthData auth) throws DataAccessException {
-
+    public AuthData createAuth(AuthData auth) throws DataAccessException {
+        return null;
     }
 
     @Override
@@ -62,10 +71,33 @@ public class MySqlDataAccess implements DataAccess{
     }
 
     @Override
-    public void createGame(GameData game) throws DataAccessException {
+    public void updateGame(GameData game) throws DataAccessException {
         Gson gson = new Gson();
-        String gameJson = gson.toJson(game);
+        String gameJson = gson.toJson(game.game()); // Serialize the ChessGame
+        String sql = "UPDATE Games SET whiteUsername = ?, blackUsername = ?, gameName = ?, gameData = ? WHERE gameID = ?";
+
+        try (var conn = DatabaseManager.getConnection();
+             var preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setString(1, game.whiteUsername());
+            preparedStatement.setString(2, game.blackUsername());
+            preparedStatement.setString(3, game.gameName());
+            preparedStatement.setString(4, gameJson);
+            preparedStatement.setInt(5, game.gameID());
+            preparedStatement.executeUpdate();
+        } catch (SQLException ex) {
+            throw new DataAccessException(String.format("Unable to update game: %s", ex.getMessage()));
+        }
+    }
+
+    @Override
+    public int createGame(String gameName) throws DataAccessException {
+        Gson gson = new Gson();
+        ChessGame chessGame = new ChessGame(); //Create a new ChessGame
+        String gameJson = gson.toJson(chessGame); //Convert the chess game to Json.
+        GameData game = new GameData(gameId++, null, null, gameName, chessGame); // Create a new GameData object.
+
         String sql = "INSERT INTO Games (whiteUsername, blackUsername, gameName, gameData) VALUES (?, ?, ?, ?)";
+
         try (var conn = DatabaseManager.getConnection();
              var preparedStatement = conn.prepareStatement(sql)) {
             preparedStatement.setString(1, game.whiteUsername());
@@ -76,6 +108,7 @@ public class MySqlDataAccess implements DataAccess{
         } catch (SQLException ex) {
             throw new DataAccessException(String.format("Unable to create game: %s", ex.getMessage()));
         }
+        return game.gameID();
     }
 
     @Override

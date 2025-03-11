@@ -1,15 +1,10 @@
 package dataaccess;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+
 import dataaccess.daoclasses.AuthDataDAO;
 import dataaccess.daoclasses.GameDataDAO;
 import dataaccess.daoclasses.UserDataDAO;
-import dataaccess.MemoryAuthDataDAO;
-import dataaccess.MemoryGameDataDAO;
-import dataaccess.MemoryUserDataDAO;
 
 import model.UserData;
 import model.AuthData;
@@ -47,8 +42,13 @@ public class MemoryDataAccess implements DataAccess{
     }
 
     @Override
-    public void createGame(GameData game) throws DataAccessException {
-        gameDataDAO.createGame(game);
+    public int createGame(String gameName) throws DataAccessException {
+        return gameDataDAO.createGame(gameName);
+    }
+
+    @Override
+    public void updateGame(GameData game) throws DataAccessException {
+        gameDataDAO.updateGame(game);
     }
 
     @Override

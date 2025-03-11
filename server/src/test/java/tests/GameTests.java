@@ -32,8 +32,8 @@ class GameTests {
         String authToken = createAuthToken("testUser");
         GameData game1 = createGameData(1, "Game1");
         GameData game2 = createGameData(2, "Game2");
-        testDataAccess.createGame(game1);
-        testDataAccess.createGame(game2);
+        testDataAccess.createGame(game1.gameName());
+        testDataAccess.createGame(game2.gameName());
 
         Collection<GameData> games = gameService.listGames(authToken);
 
@@ -66,7 +66,7 @@ class GameTests {
     void joinGameValidWhitePlayerJoinsGame() throws DataAccessException {
         String authToken = createAuthToken("testUser");
         GameData game = createGameData(1, "Game");
-        testDataAccess.createGame(game);
+        testDataAccess.createGame(game.gameName());
 
         gameService.joinGame(authToken, 1, "WHITE");
 
@@ -79,7 +79,7 @@ class GameTests {
     void joinGameValidBlackPlayerJoinsGame() throws DataAccessException {
         String authToken = createAuthToken("testUser");
         GameData game = createGameData(1, "Game");
-        testDataAccess.createGame(game);
+        testDataAccess.createGame(game.gameName());
 
         gameService.joinGame(authToken, 1, "BLACK");
 
@@ -105,7 +105,8 @@ class GameTests {
         String authToken2 = createAuthToken("user2");
         GameData game = createGameData(1, "Game");
         game = new GameData(1, "user1", null, "Game", new ChessGame());
-        testDataAccess.createGame(game);
+        testDataAccess.createGame(game.gameName());
+        testDataAccess.updateGame(game);
 
         assertThrows(DataAccessException.class, () -> gameService.joinGame(authToken2, 1, "WHITE"));
     }
@@ -116,7 +117,8 @@ class GameTests {
         String authToken2 = createAuthToken("user2");
         GameData game = createGameData(1, "Game");
         game = new GameData(1, null, "user1", "Game", new ChessGame());
-        testDataAccess.createGame(game);
+        testDataAccess.createGame(game.gameName());
+        testDataAccess.updateGame(game);
 
         assertThrows(DataAccessException.class, () -> gameService.joinGame(authToken2, 1, "BLACK"));
     }
@@ -125,7 +127,7 @@ class GameTests {
     void joinGameInvalidColorThrowsDataAccessException() throws DataAccessException{
         String authToken = createAuthToken("user1");
         GameData game = createGameData(1, "Game");
-        testDataAccess.createGame(game);
+        testDataAccess.createGame(game.gameName());
 
         assertThrows(DataAccessException.class, () -> gameService.joinGame(authToken, 1, "PURPLE"));
     }
@@ -134,7 +136,7 @@ class GameTests {
     void joinGameNullColorThrowsDataAccessException() throws DataAccessException{
         String authToken = createAuthToken("user1");
         GameData game = createGameData(1, "Game");
-        testDataAccess.createGame(game);
+        testDataAccess.createGame(game.gameName());
 
         assertThrows(DataAccessException.class, () -> gameService.joinGame(authToken, 1, null));
     }

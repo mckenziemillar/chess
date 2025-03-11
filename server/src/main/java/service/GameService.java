@@ -13,7 +13,7 @@ import java.util.UUID;
 public class GameService {
     private final DataAccess dataAccess;
     private final AuthService authService;
-    private int nextGameID = 1;
+    //private int nextGameID = 1;
 
     public GameService() {
         this.dataAccess = new MemoryDataAccess();
@@ -38,11 +38,9 @@ public class GameService {
         if (authData == null) {
             throw new DataAccessException("Error: unauthorized");
         }
-        int gameID = nextGameID++;
         ChessGame chessGame = new ChessGame();
-        GameData gameData = new GameData(gameID, null, null, gameName, chessGame);
-        dataAccess.createGame(gameData);
-        return gameData;
+        int id = dataAccess.createGame(gameName);
+        return new GameData(id, null, null, gameName, chessGame);
     }
 
     public void joinGame(String authToken, int gameID, String playerColor) throws DataAccessException {
@@ -76,6 +74,6 @@ public class GameService {
             throw new DataAccessException("Error: bad request");
         }
 
-        dataAccess.createGame(gameData); // Update the game in storage
+        dataAccess.updateGame(gameData); // Update the game in storage
     }
 }

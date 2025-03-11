@@ -31,7 +31,7 @@ class ClearTests {
         testDataAccess.createAuth(auth);
 
         GameData game = new GameData(1, "user1", null, "game1", new chess.ChessGame());
-        testDataAccess.createGame(game);
+        testDataAccess.createGame(game.gameName());
 
         clearService.clear();
 

@@ -46,8 +46,13 @@ public class TestDataAccess implements DataAccess {
     }
 
     @Override
-    public void createGame(GameData game) throws DataAccessException {
-        gameDataDAO.createGame(game);
+    public void updateGame(GameData game) throws DataAccessException {
+        gameDataDAO.updateGame(game);
+    }
+
+    @Override
+    public int createGame(String gameName) throws DataAccessException {
+        return gameDataDAO.createGame(gameName);
     }
 
     @Override

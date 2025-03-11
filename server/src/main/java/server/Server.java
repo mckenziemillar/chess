@@ -18,6 +18,7 @@ import spark.*;
 public class Server {
 
     public int run(int desiredPort) {
+
         Spark.port(desiredPort);
 
         Spark.staticFiles.location("web");
@@ -25,7 +26,7 @@ public class Server {
         MemoryDataAccess dataAccess = new MemoryDataAccess();
         UserService userService = new UserService(dataAccess);
         AuthService authService = new AuthService(dataAccess);
-        GameService gameService = new GameService(dataAccess);
+        GameService gameService = new GameService(dataAccess, authService);
         ClearService clearService = new ClearService(dataAccess);
 
         RegisterHandler registerHandler = new RegisterHandler(userService);

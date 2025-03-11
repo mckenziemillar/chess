@@ -125,7 +125,7 @@ public class DataAccessTests {
         GameData game1 = new GameData(1, "whiteUser1", "blackUser1", "game1", chessGame1);
         dataAccess.createUser(new UserData("whiteUser1", "pass", "white1@test.com"));
         dataAccess.createUser(new UserData("blackUser1", "pass", "black1@test.com"));
-        dataAccess.createGame(game1);
+        dataAccess.createGame(game1.gameName());
         dataAccess.clear();
         assertEquals(0,dataAccess.listGames().size());
         assertNull(dataAccess.getUser("whiteUser1"));

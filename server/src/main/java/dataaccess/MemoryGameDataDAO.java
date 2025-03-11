@@ -1,9 +1,9 @@
 package dataaccess;
 
-import dataaccess.DataAccessException;
 import dataaccess.daoclasses.GameDataDAO;
 import model.GameData;
 
+import chess.ChessGame;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,17 +15,27 @@ public class MemoryGameDataDAO implements GameDataDAO {
     private int nextGameID = 1;
 
     @Override
-    public int createGame(GameData game) throws DataAccessException {
-        if (games.containsKey(game.gameID())) {
-            games.put(game.gameID(), game); //Update the game.
-            return game.gameID();
-        }
+    public int createGame(String gameName) throws DataAccessException {
+        ChessGame chessGame = new ChessGame();
 
+        // Create a new GameData object with the provided gameName and auto-generated gameID
+        GameData gameWithID = new GameData(nextGameID++, null, null, gameName, chessGame);
 
-        //int gameID = nextGameID++;
-        GameData gameWithID = new GameData(nextGameID++, game.whiteUsername(), game.blackUsername(), game.gameName(), game.game());
+        // Store the game in the map
         games.put(gameWithID.gameID(), gameWithID);
+
+        // Return the generated gameID
         return gameWithID.gameID();
+
+    }
+
+    @Override
+    public void updateGame(GameData game) throws DataAccessException {
+        if (games.containsKey(game.gameID())) {
+            games.put(game.gameID(), game);
+        } else {
+            throw new DataAccessException("Error: game not found");
+        }
     }
 
     @Override
