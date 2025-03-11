@@ -7,6 +7,7 @@ import model.UserData;
 import chess.ChessGame;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 
 public class MySqlDataAccess implements DataAccess{
@@ -175,7 +176,19 @@ public class MySqlDataAccess implements DataAccess{
 
     @Override
     public Collection<GameData> listGames() throws DataAccessException {
-        return null;
+        String sql = "SELECT * FROM Games";
+        try (var conn = DatabaseManager.getConnection();
+             var preparedStatement = conn.prepareStatement(sql);
+             var resultSet = preparedStatement.executeQuery()) {
+            Collection<GameData> games = new ArrayList<>();
+            Gson gson = new Gson();
+            while (resultSet.next()) {
+                games.add(new GameData(resultSet.getInt("gameID"), resultSet.getString("whiteUsername"), resultSet.getString("blackUsername"), resultSet.getString("gameName"), gson.fromJson(resultSet.getString("gameData"), chess.ChessGame.class)));
+            }
+            return games;
+        } catch (SQLException ex) {
+            throw new DataAccessException(String.format("Unable to list games: %s", ex.getMessage()));
+        }
     }
 
     private final String[] createStatements = {
