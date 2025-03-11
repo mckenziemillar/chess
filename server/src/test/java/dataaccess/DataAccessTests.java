@@ -60,12 +60,18 @@ public class DataAccessTests {
     // createAuth Tests
     @Test
     void createAuth_positive() throws DataAccessException {
-
+        AuthData auth = new AuthData(UUID.randomUUID().toString(), "testUser");
+        dataAccess.createUser(new UserData("testUser", "pass", "test@test.com"));
+        dataAccess.createAuth(auth);
+        AuthData retrievedAuth = dataAccess.getAuth(auth.authToken());
+        assertNotNull(retrievedAuth);
+        assertEquals(auth.authToken(), retrievedAuth.authToken());
     }
 
     @Test
     void createAuth_negative_userNotFound() {
-
+        AuthData auth = new AuthData(UUID.randomUUID().toString(), "nonExistentUser");
+        assertThrows(DataAccessException.class, () -> dataAccess.createAuth(auth));
     }
 
     // getAuth Tests
