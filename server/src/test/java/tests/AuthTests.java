@@ -16,8 +16,13 @@ class AuthTests {
 
     @BeforeEach
     void setUp() {
-        testDataAccess = new TestDataAccess();
-        authService = new AuthService(testDataAccess);
+        try {
+            testDataAccess = new TestDataAccess();
+            authService = new AuthService(testDataAccess);
+        } catch (DataAccessException e) {
+            e.printStackTrace();
+            fail("Failed to setup test due to DataAccessException: " + e.getMessage());
+        }
     }
 
     @Test

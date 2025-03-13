@@ -1,8 +1,6 @@
 package service;
 
-import dataaccess.DataAccessException;
-import dataaccess.DataAccess;
-import dataaccess.MemoryDataAccess;
+import dataaccess.*;
 import model.AuthData;
 import model.UserData;
 
@@ -11,7 +9,12 @@ public class AuthService {
     private final DataAccess dataAccess;
 
     public AuthService() {
-        this.dataAccess = new MemoryDataAccess();
+        try {
+            this.dataAccess = new MySqlDataAccess();
+        } catch (DataAccessException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     public AuthService(DataAccess dataAccess) {
@@ -20,7 +23,7 @@ public class AuthService {
 
     public AuthData login(String username, String password) throws DataAccessException {
         UserData user = dataAccess.getUser(username);
-        if (user == null || !user.password().equals(password)) {
+        if (user == null || !dataAccess.verifyUser(username, password)) {
             throw new DataAccessException("Error: unauthorized");
         }
 

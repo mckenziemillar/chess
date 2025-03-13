@@ -6,6 +6,7 @@ import model.UserData;
 import service.UserService;
 import spark.Request;
 import spark.Response;
+import org.mindrot.jbcrypt.BCrypt;
 public class RegisterHandler {
     private final UserService userService;
     private final Gson gson;

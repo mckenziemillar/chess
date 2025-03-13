@@ -1,5 +1,6 @@
 package server;
 import dataaccess.DataAccessException;
+import dataaccess.MySqlDataAccess;
 import server.handler.ClearHandler;
 import server.handler.CreateGameHandler;
 import server.handler.RegisterHandler;
@@ -23,7 +24,12 @@ public class Server {
 
         Spark.staticFiles.location("web");
 
-        MemoryDataAccess dataAccess = new MemoryDataAccess();
+        MySqlDataAccess dataAccess = null;
+        try {
+            dataAccess = new MySqlDataAccess();
+        } catch (DataAccessException e) {
+            throw new RuntimeException(e);
+        }
         UserService userService = new UserService(dataAccess);
         AuthService authService = new AuthService(dataAccess);
         GameService gameService = new GameService(dataAccess, authService);

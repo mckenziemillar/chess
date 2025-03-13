@@ -128,12 +128,20 @@ public class DataAccessTests {
     // getGame Tests
     @Test
     void getGame_positive() throws DataAccessException {
-
+        ChessGame chessGame = new ChessGame();
+        GameData game = new GameData(1, "whiteUser", "blackUser", "testGame", chessGame);
+        dataAccess.createUser(new UserData("whiteUser", "pass", "white@test.com"));
+        dataAccess.createUser(new UserData("blackUser", "pass", "black@test.com"));
+        dataAccess.createGame(game.gameName());
+        GameData retrievedGame = dataAccess.getGame(1);
+        assertNotNull(retrievedGame);
+        assertEquals(game.gameName(), retrievedGame.gameName());
     }
 
     @Test
     void getGame_negative_gameNotFound() throws DataAccessException {
-
+        GameData retrievedGame = dataAccess.getGame(999);
+        assertNull(retrievedGame);
     }
 
     // listGames Tests

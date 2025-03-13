@@ -5,8 +5,10 @@ import model.AuthData;
 import model.GameData;
 import model.UserData;
 import chess.ChessGame;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -39,11 +41,12 @@ public class MySqlDataAccess implements DataAccess{
 
     @Override
     public void createUser(UserData user) throws DataAccessException {
+        String hashedPassword = BCrypt.hashpw(user.password(), BCrypt.gensalt());
         String sql = "INSERT INTO Users (username, password, email) VALUES (?, ?, ?)";
         try (var conn = DatabaseManager.getConnection();
              var preparedStatement = conn.prepareStatement(sql)) {
             preparedStatement.setString(1, user.username());
-            preparedStatement.setString(2, user.password()); // Remember to hash passwords!
+            preparedStatement.setString(2, hashedPassword); // Remember to hash passwords!
             preparedStatement.setString(3, user.email());
             preparedStatement.executeUpdate();
         } catch (SQLException ex) {
@@ -67,6 +70,14 @@ public class MySqlDataAccess implements DataAccess{
         } catch (SQLException ex) {
             throw new DataAccessException(String.format("Unable to get user: %s", ex.getMessage()));
         }
+    }
+
+    public boolean verifyUser(String username, String providedClearTextPassword) throws DataAccessException{
+        UserData user = getUser(username);
+        if (user == null) {
+            return false; // User not found
+        }
+        return BCrypt.checkpw(providedClearTextPassword, user.password());
     }
 
     @Override
@@ -138,21 +149,26 @@ public class MySqlDataAccess implements DataAccess{
         Gson gson = new Gson();
         ChessGame chessGame = new ChessGame(); //Create a new ChessGame
         String gameJson = gson.toJson(chessGame); //Convert the chess game to Json.
-        GameData game = new GameData(gameId++, null, null, gameName, chessGame); // Create a new GameData object.
+        gameId++;
+        GameData game = new GameData(gameId, null, null, gameName, chessGame); // Create a new GameData object.
 
         String sql = "INSERT INTO Games (whiteUsername, blackUsername, gameName, gameData) VALUES (?, ?, ?, ?)";
 
         try (var conn = DatabaseManager.getConnection();
-             var preparedStatement = conn.prepareStatement(sql)) {
+             var preparedStatement = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             preparedStatement.setString(1, game.whiteUsername());
             preparedStatement.setString(2, game.blackUsername());
             preparedStatement.setString(3, game.gameName());
             preparedStatement.setString(4, gameJson);
             preparedStatement.executeUpdate();
+            var rs = preparedStatement.getGeneratedKeys();
+            if(rs.next()){
+                return rs.getInt(1);
+            }
         } catch (SQLException ex) {
             throw new DataAccessException(String.format("Unable to create game: %s", ex.getMessage()));
         }
-        return game.gameID();
+        return -1;
     }
 
     @Override

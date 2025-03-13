@@ -17,5 +17,6 @@ public interface DataAccess {
     GameData getGame(int gameID) throws DataAccessException;
     Collection<GameData> listGames() throws DataAccessException;
 
+    boolean verifyUser(String username, String password);
 }
 
