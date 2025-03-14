@@ -151,6 +151,9 @@ public class MySqlDataAccess implements DataAccess{
 
     @Override
     public int createGame(String gameName) throws DataAccessException {
+        if(gameName == null){
+            throw new DataAccessException("Game name cannot be null");
+        }
         Gson gson = new Gson();
         ChessGame chessGame = new ChessGame(); //Create a new ChessGame
         String gameJson = gson.toJson(chessGame); //Convert the chess game to Json.
@@ -185,7 +188,11 @@ public class MySqlDataAccess implements DataAccess{
             try (var resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
                     Gson gson = new Gson();
-                    return new GameData(resultSet.getInt("gameID"), resultSet.getString("whiteUsername"), resultSet.getString("blackUsername"), resultSet.getString("gameName"), gson.fromJson(resultSet.getString("gameData"), chess.ChessGame.class));
+                    return new GameData(resultSet.getInt("gameID"),
+                            resultSet.getString("whiteUsername"),
+                            resultSet.getString("blackUsername"),
+                            resultSet.getString("gameName"),
+                            gson.fromJson(resultSet.getString("gameData"), chess.ChessGame.class));
                 } else {
                     return null;
                 }
@@ -204,7 +211,11 @@ public class MySqlDataAccess implements DataAccess{
             Collection<GameData> games = new ArrayList<>();
             Gson gson = new Gson();
             while (resultSet.next()) {
-                games.add(new GameData(resultSet.getInt("gameID"), resultSet.getString("whiteUsername"), resultSet.getString("blackUsername"), resultSet.getString("gameName"), gson.fromJson(resultSet.getString("gameData"), chess.ChessGame.class)));
+                games.add(new GameData(resultSet.getInt("gameID"),
+                        resultSet.getString("whiteUsername"),
+                        resultSet.getString("blackUsername"),
+                        resultSet.getString("gameName"),
+                        gson.fromJson(resultSet.getString("gameData"), chess.ChessGame.class)));
             }
             return games;
         } catch (SQLException ex) {

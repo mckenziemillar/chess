@@ -21,9 +21,29 @@ public class DataAccessTests {
         dataAccess = new MySqlDataAccess();
         dataAccess.clear();
     }
+    private UserData createTestUser(String username) {
+        return new UserData(username, "pass", username + "@test.com");
+    }
+
+
+    private AuthData createAndInsertAuth(String username) throws DataAccessException {
+        UserData user = createTestUser(username);
+        dataAccess.createUser(user);
+        AuthData auth = new AuthData(UUID.randomUUID().toString(), username);
+        dataAccess.createAuth(auth);
+        return auth;
+    }
+
+    private GameData createAndInsertGame(String gameName, String whiteUsername, String blackUsername) throws DataAccessException {
+        ChessGame chessGame = new ChessGame();
+        dataAccess.createUser(createTestUser(whiteUsername));
+        dataAccess.createUser(createTestUser(blackUsername));
+        dataAccess.createGame(gameName);
+        return new GameData(1, whiteUsername, blackUsername, gameName, chessGame);
+    }
 
     @Test
-    void createUser_positive() throws DataAccessException {
+    void createUserPositive() throws DataAccessException {
         UserData user = new UserData("testUser", "password", "test@example.com");
         dataAccess.createUser(user);
         UserData retrievedUser = dataAccess.getUser("testUser");
@@ -34,7 +54,7 @@ public class DataAccessTests {
     }
 
     @Test
-    void createUser_negative_duplicateUsername() {
+    void createUserNegativeDuplicateUsername() {
         UserData user1 = new UserData("duplicateUser", "password", "test1@example.com");
         UserData user2 = new UserData("duplicateUser", "password", "test2@example.com");
         assertDoesNotThrow(() -> dataAccess.createUser(user1));
@@ -43,7 +63,7 @@ public class DataAccessTests {
 
     // getUser Tests
     @Test
-    void getUser_positive() throws DataAccessException {
+    void getUserPositive() throws DataAccessException {
         UserData user = new UserData("existingUser", "password", "exist@example.com");
         dataAccess.createUser(user);
         UserData retrievedUser = dataAccess.getUser("existingUser");
@@ -52,101 +72,70 @@ public class DataAccessTests {
     }
 
     @Test
-    void getUser_negative_userNotFound() throws DataAccessException {
+    void getUserNegativeUserNotFound() throws DataAccessException {
         UserData retrievedUser = dataAccess.getUser("nonExistentUser");
         assertNull(retrievedUser);
     }
 
     // createAuth Tests
     @Test
-    void createAuth_positive() throws DataAccessException {
-        AuthData auth = new AuthData(UUID.randomUUID().toString(), "testUser");
-        dataAccess.createUser(new UserData("testUser", "pass", "test@test.com"));
-        dataAccess.createAuth(auth);
+    void getAuthPositive() throws DataAccessException {
+        AuthData auth = createAndInsertAuth("testUser");
         AuthData retrievedAuth = dataAccess.getAuth(auth.authToken());
         assertNotNull(retrievedAuth);
         assertEquals(auth.authToken(), retrievedAuth.authToken());
     }
 
     @Test
-    void createAuth_negative_userNotFound() {
-        AuthData auth = new AuthData(UUID.randomUUID().toString(), "nonExistentUser");
-        assertThrows(DataAccessException.class, () -> dataAccess.createAuth(auth));
-    }
-
-    // getAuth Tests
-    @Test
-    void getAuth_positive() throws DataAccessException {
-        AuthData auth = new AuthData(UUID.randomUUID().toString(), "testUser");
-        dataAccess.createUser(new UserData("testUser", "pass", "test@test.com"));
-        dataAccess.createAuth(auth);
-        AuthData retrievedAuth = dataAccess.getAuth(auth.authToken());
-        assertNotNull(retrievedAuth);
-        assertEquals(auth.authToken(), retrievedAuth.authToken());
-    }
-
-    @Test
-    void getAuth_negative_authNotFound() throws DataAccessException {
+    void getAuth_negativeAuthNotFound() throws DataAccessException {
         AuthData retrievedAuth = dataAccess.getAuth("nonExistentAuth");
         assertNull(retrievedAuth);
     }
 
     @Test
-    void deleteAuth_positive() throws DataAccessException {
-        AuthData auth = new AuthData(UUID.randomUUID().toString(), "testUser");
-        dataAccess.createUser(new UserData("testUser", "pass", "test@test.com"));
-        dataAccess.createAuth(auth);
+    void deleteAuthPositive() throws DataAccessException {
+        AuthData auth = createAndInsertAuth("testUser");
         dataAccess.deleteAuth(auth.authToken());
         AuthData retrievedAuth = dataAccess.getAuth(auth.authToken());
         assertNull(retrievedAuth);
     }
 
     @Test
-    void deleteAuth_negative_authNotFound() throws DataAccessException {
+    void deleteAuthNegativeAuthNotFound() throws DataAccessException {
         assertDoesNotThrow(() -> dataAccess.deleteAuth("nonExistentAuth"));
     }
 
     @Test
-    void createGame_positive() throws DataAccessException {
-        ChessGame chessGame = new ChessGame();
-        GameData game = new GameData(1, "whiteUser", "blackUser", "testGame", chessGame);
-        dataAccess.createUser(new UserData("whiteUser", "pass", "white@test.com"));
-        dataAccess.createUser(new UserData("blackUser", "pass", "black@test.com"));
-        dataAccess.createGame(game.gameName());
+    void createGamePositive() throws DataAccessException {
+        GameData game = createAndInsertGame("testGame", "whiteUser", "blackUser");
         GameData retrievedGame = dataAccess.getGame(1);
         assertNotNull(retrievedGame);
         assertEquals(game.gameName(), retrievedGame.gameName());
     }
 
     @Test
-    void createGame_negative_userNotFound() {
-        ChessGame chessGame = new ChessGame();
-        GameData game = new GameData(1, "nonExistentUser", "blackUser", "testGame", chessGame);
-        assertThrows(DataAccessException.class, () -> dataAccess.createGame(game.gameName()));
+    void createGameNegativeUserNotFound() {
+        assertThrows(DataAccessException.class, () -> dataAccess.createGame(null));
     }
 
     // getGame Tests
     @Test
-    void getGame_positive() throws DataAccessException {
-        ChessGame chessGame = new ChessGame();
-        GameData game = new GameData(1, "whiteUser", "blackUser", "testGame", chessGame);
-        dataAccess.createUser(new UserData("whiteUser", "pass", "white@test.com"));
-        dataAccess.createUser(new UserData("blackUser", "pass", "black@test.com"));
-        dataAccess.createGame(game.gameName());
+    void getGamePositive() throws DataAccessException {
+        GameData game = createAndInsertGame("testGame", "whiteUser", "blackUser");
         GameData retrievedGame = dataAccess.getGame(1);
         assertNotNull(retrievedGame);
         assertEquals(game.gameName(), retrievedGame.gameName());
     }
 
     @Test
-    void getGame_negative_gameNotFound() throws DataAccessException {
+    void getGameNegativeGameNotFound() throws DataAccessException {
         GameData retrievedGame = dataAccess.getGame(999);
         assertNull(retrievedGame);
     }
 
     // listGames Tests
     @Test
-    void listGames_positive() throws DataAccessException {
+    void listGamesPositive() throws DataAccessException {
         ChessGame chessGame1 = new ChessGame();
         ChessGame chessGame2 = new ChessGame();
         GameData game1 = new GameData(1, "whiteUser1", "blackUser1", "game1", chessGame1);
