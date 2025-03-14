@@ -72,8 +72,13 @@ public class MySqlDataAccess implements DataAccess{
         }
     }
 
-    public boolean verifyUser(String username, String providedClearTextPassword) throws DataAccessException{
-        UserData user = getUser(username);
+    public boolean verifyUser(String username, String providedClearTextPassword){
+        UserData user = null;
+        try {
+            user = getUser(username);
+        } catch (DataAccessException e) {
+            throw new RuntimeException(e);
+        }
         if (user == null) {
             return false; // User not found
         }

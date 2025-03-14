@@ -22,7 +22,11 @@ class GameTests {
 
     @BeforeEach
     void setUp() {
-        testDataAccess = new TestDataAccess();
+        try {
+            testDataAccess = new TestDataAccess();
+        } catch (DataAccessException e) {
+            throw new RuntimeException(e);
+        }
         authService = new AuthService(testDataAccess);
         gameService = new GameService(testDataAccess, authService);
     }

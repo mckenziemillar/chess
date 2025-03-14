@@ -16,7 +16,11 @@ class UserTests {
 
     @BeforeEach
     void setUp() {
-        testDataAccess = new TestDataAccess();
+        try {
+            testDataAccess = new TestDataAccess();
+        } catch (DataAccessException e) {
+            throw new RuntimeException(e);
+        }
         userService = new UserService(testDataAccess);
     }
 

@@ -62,6 +62,11 @@ public class MemoryDataAccess implements DataAccess{
     }
 
     @Override
+    public boolean verifyUser(String username, String password) {
+        return false;
+    }
+
+    @Override
     public AuthData getAuth(String authToken) throws DataAccessException {
         return authDataDAO.getAuth(authToken);
     }

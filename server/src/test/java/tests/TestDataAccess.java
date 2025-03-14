@@ -63,4 +63,9 @@ public class TestDataAccess implements DataAccess {
     public Collection<GameData> listGames() throws DataAccessException {
         return mySqlDataAccess.listGames();
     }
+
+    @Override
+    public boolean verifyUser (String username, String password) {
+        return false;
+    }
 }
