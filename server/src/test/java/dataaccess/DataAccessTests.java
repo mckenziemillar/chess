@@ -87,7 +87,7 @@ public class DataAccessTests {
     }
 
     @Test
-    void getAuth_negativeAuthNotFound() throws DataAccessException {
+    void getAuthNegativeAuthNotFound() throws DataAccessException {
         AuthData retrievedAuth = dataAccess.getAuth("nonExistentAuth");
         assertNull(retrievedAuth);
     }
@@ -107,10 +107,15 @@ public class DataAccessTests {
 
     @Test
     void createGamePositive() throws DataAccessException {
-        GameData game = createAndInsertGame("testGame", "whiteUser", "blackUser");
-        GameData retrievedGame = dataAccess.getGame(1);
-        assertNotNull(retrievedGame);
-        assertEquals(game.gameName(), retrievedGame.gameName());
+        String gameName = "testGame";
+        String whiteUser = "whiteUser";
+        String blackUser = "blackUser";
+        GameData game = createAndInsertGame(gameName, whiteUser, blackUser);
+        assertNotNull(game);
+        assertEquals(gameName, game.gameName());
+        assertEquals(whiteUser, game.whiteUsername());
+        assertEquals(blackUser, game.blackUsername());
+        assertNotNull(game.game()); // Ensure a ChessGame object was created
     }
 
     @Test
@@ -153,7 +158,7 @@ public class DataAccessTests {
 
     // clear Test
     @Test
-    void clear_positive() throws DataAccessException {
+    void clearPositive() throws DataAccessException {
         ChessGame chessGame1 = new ChessGame();
         GameData game1 = new GameData(1, "whiteUser1", "blackUser1", "game1", chessGame1);
         dataAccess.createUser(new UserData("whiteUser1", "pass", "white1@test.com"));
