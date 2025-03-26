@@ -99,7 +99,15 @@ public class ServerFacade {
         }
     }
 
-    // TODO: Implement other methods: logout, joinGame, observeGame
+    public void setAuthToken(String authToken) {
+        this.authToken = authToken;
+    }
+
+    public String getAuthToken() {
+        return authToken;
+    }
+
+    // TODO: Implement logout, joinGame, observeGame
 
     public record RegisterRequest(String username, String password, String email) {}
     public record LoginRequest(String username, String password) {}
