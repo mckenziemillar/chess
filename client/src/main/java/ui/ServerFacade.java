@@ -1,8 +1,13 @@
+package ui;
+
 import com.google.gson.Gson;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import model.AuthData;
+import model.GameData;
 
 public class ServerFacade {
 
@@ -18,7 +23,6 @@ public class ServerFacade {
         this.authToken = null;
     }
 
-    // Example: Register method
     public AuthData register(String username, String password, String email) throws Exception {
         URI uri = URI.create(serverUrl + "/user");
         String jsonBody = gson.toJson(new RegisterRequest(username, password, email));
@@ -37,7 +41,7 @@ public class ServerFacade {
         }
     }
 
-    // Example: Login method
+
     public AuthData login(String username, String password) throws Exception {
         URI uri = URI.create(serverUrl + "/session");
         String jsonBody = gson.toJson(new LoginRequest(username, password));
@@ -58,7 +62,6 @@ public class ServerFacade {
         }
     }
 
-    // Example: Create Game Method
     public GameData createGame(String gameName) throws Exception {
         URI uri = URI.create(serverUrl + "/game");
         String jsonBody = gson.toJson(new CreateGameRequest(gameName));
@@ -78,7 +81,7 @@ public class ServerFacade {
         }
     }
 
-    // Example: List Games Method
+
     public GameData[] listGames() throws Exception {
         URI uri = URI.create(serverUrl + "/game");
         HttpRequest request = HttpRequest.newBuilder()
@@ -101,6 +104,6 @@ public class ServerFacade {
     public record RegisterRequest(String username, String password, String email) {}
     public record LoginRequest(String username, String password) {}
     public record CreateGameRequest(String gameName) {}
-    public record AuthData(String authToken, String username) {}
-    public record GameData(int gameID, String gameName, String whiteUsername, String blackUsername) {}
+    //public record AuthData(String authToken, String username) {}
+    //public record GameData(int gameID, String gameName, String whiteUsername, String blackUsername) {}
 }
