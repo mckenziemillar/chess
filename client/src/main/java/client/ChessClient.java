@@ -129,10 +129,18 @@ public class ChessClient {
                     break;
                 case "create game":
                     System.out.print("Enter the name for the new game: ");
-                    String gameName = scanner.nextLine();
-                    GameData newGame = serverFacade.createGame(gameName);
-                    System.out.println("Created game: " + newGame.gameName() + ".");
-                    break;
+                    String gameName = scanner.nextLine().trim();
+                    if (gameName.isEmpty()) {
+                        System.out.println("Error: Game name cannot be empty. Please enter a name.");
+                    } else {
+                        try {
+                            GameData newGame = serverFacade.createGame(gameName);
+                            System.out.println("Created game: " + newGame.gameName() + ".");
+                        } catch (Exception e) {
+                            System.out.println("Error creating game: " + e.getMessage());
+                        }
+                }
+                break;
                 case "list games":
                     GameData[] games = serverFacade.listGames();
                     if (games != null && games.length > 0) {
@@ -181,6 +189,7 @@ public class ChessClient {
                     if (scanner.hasNextInt()) {
                         int gameNumber = scanner.nextInt();
                         scanner.nextLine(); // Consume newline
+                        populateGameListings();
                         GameData selectedGame = gameListings.get(gameNumber);
                         if (selectedGame != null) {
                             serverFacade.observeGame(selectedGame.gameID());
