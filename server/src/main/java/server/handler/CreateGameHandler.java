@@ -21,7 +21,7 @@ public class CreateGameHandler {
             String authToken = req.headers("Authorization");
             GameData gameData = gameService.createGame(authToken, createGameRequest.gameName());
             res.status(200);
-            return gson.toJson(new CreateGameResult(gameData.gameID()));
+            return gson.toJson(gameData);
         } catch (DataAccessException e) {
             res.status(401);
             return gson.toJson(new ErrorMessage("Error: " + e.getMessage()));

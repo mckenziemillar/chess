@@ -82,6 +82,8 @@ public class ServerFacade {
     }
 
 
+
+
     public GameData[] listGames() throws Exception {
         URI uri = URI.create(serverUrl + "/game");
         HttpRequest request = HttpRequest.newBuilder()

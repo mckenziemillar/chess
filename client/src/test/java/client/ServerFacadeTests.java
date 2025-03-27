@@ -91,7 +91,6 @@ public class ServerFacadeTests {
         assertEquals(testGameName, gameData.gameName());
         assertNull(gameData.whiteUsername());
         assertNull(gameData.blackUsername());
-        //testGameId = gameData.gameID();
     }
 
     @Test
@@ -129,6 +128,16 @@ public class ServerFacadeTests {
         assertNotNull(games);
     }
 
+    @Test
+    void listGamesFailureUnauthorized() {
+        ServerFacade unauthorizedFacade = new ServerFacade(serverUrl);
+        try {
+            unauthorizedFacade.listGames();
+            fail("Expected an exception for unauthorized access");
+        } catch (Exception e) {
+            assertTrue(e.getMessage().contains("List games failed"));
+        }
+    }
 
     @AfterAll
     static void stopServer() {
