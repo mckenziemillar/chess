@@ -81,7 +81,65 @@ public class ServerFacade {
         }
     }
 
+    public void logout() throws Exception {
+        if (authToken == null) {
+            throw new Exception("Not logged in.");
+        }
+        URI uri = URI.create(serverUrl + "/session");
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri)
+                .header("authorization", authToken)
+                .DELETE()
+                .build();
 
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+            this.authToken = null; // Clear the authToken on successful logout
+        } else {
+            throw new Exception("Logout failed: " + response.body());
+        }
+    }
+
+    public void joinGame(int gameID, String playerColor) throws Exception {
+        if (authToken == null) {
+            throw new Exception("Not logged in.");
+        }
+        URI uri = URI.create(serverUrl + "/game");
+        String jsonBody = gson.toJson(new JoinGameRequest(gameID, playerColor));
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri)
+                .header("Content-Type", "application/json")
+                .header("authorization", authToken)
+                .PUT(HttpRequest.BodyPublishers.ofString(jsonBody))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            throw new Exception("Join game failed: " + response.body());
+        }
+    }
+
+    public void observeGame(int gameID) throws Exception {
+        if (authToken == null) {
+            throw new Exception("Not logged in.");
+        }
+        URI uri = URI.create(serverUrl + "/game");
+        String jsonBody = gson.toJson(new ObserveGameRequest(gameID));
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri)
+                .header("Content-Type", "application/json")
+                .header("authorization", authToken)
+                .GET()
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            throw new Exception("Observe game failed: " + response.body());
+        }
+    }
 
 
     public GameData[] listGames() throws Exception {
@@ -109,11 +167,12 @@ public class ServerFacade {
         return authToken;
     }
 
-    // TODO: Implement logout, joinGame, observeGame
 
     public record RegisterRequest(String username, String password, String email) {}
     public record LoginRequest(String username, String password) {}
     public record CreateGameRequest(String gameName) {}
+    public record JoinGameRequest(int gameID, String playerColor) {}
+    public record ObserveGameRequest(int gameID) {}
     //public record AuthData(String authToken, String username) {}
     //public record GameData(int gameID, String gameName, String whiteUsername, String blackUsername) {}
 }

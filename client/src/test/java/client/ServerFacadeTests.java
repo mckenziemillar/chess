@@ -41,6 +41,8 @@ public class ServerFacadeTests {
         AuthData authData = serverFacade.register(testUsername, "testPassword", testUsername + "@example.com");
         testAuthToken = authData.authToken();
         serverFacade.setAuthToken(testAuthToken); // Set the authToken for subsequent calls
+        GameData createdGame = serverFacade.createGame(testGameName);
+        testGameId = createdGame.gameID();
     }
 
     @Test
@@ -80,6 +82,25 @@ public class ServerFacadeTests {
             fail("Expected an exception for invalid credentials");
         } catch (Exception e) {
             assertTrue(e.getMessage().contains("Login failed"));
+        }
+    }
+
+    @Test
+    void logoutSuccess() throws Exception {
+        assertNotNull(serverFacade.getAuthToken());
+        serverFacade.logout();
+        assertNull(serverFacade.getAuthToken());
+    }
+
+    @Test
+    void logoutFailureNotLoggedIn() {
+        ServerFacade newFacade = new ServerFacade(serverUrl);
+        assertNull(newFacade.getAuthToken());
+        try {
+            newFacade.logout();
+            fail("Expected an exception for not being logged in");
+        } catch (Exception e) {
+            assertTrue(e.getMessage().contains("Not logged in"));
         }
     }
 
@@ -136,6 +157,58 @@ public class ServerFacadeTests {
             fail("Expected an exception for unauthorized access");
         } catch (Exception e) {
             assertTrue(e.getMessage().contains("List games failed"));
+        }
+    }
+
+    @Test
+    void joinGameSuccess() throws Exception {
+        serverFacade.joinGame(testGameId, "WHITE");
+    }
+
+    @Test
+    void joinGameFailureUnauthorized() {
+        ServerFacade unauthorizedFacade = new ServerFacade(serverUrl);
+        try {
+            unauthorizedFacade.joinGame(testGameId, "BLACK");
+            fail("Expected an exception for unauthorized access");
+        } catch (Exception e) {
+            assertTrue(e.getMessage().contains("Not logged in"));
+        }
+    }
+
+    @Test
+    void joinGameFailureGameNotFound() {
+        try {
+            serverFacade.joinGame(99999, "BLACK"); // Assuming this game ID doesn't exist
+            fail("Expected an exception for game not found");
+        } catch (Exception e) {
+            assertTrue(e.getMessage().contains("Join game failed"));
+        }
+    }
+
+    @Test
+    void observeGameSuccess() throws Exception {
+        serverFacade.observeGame(testGameId);
+    }
+
+    @Test
+    void observeGameFailureUnauthorized() {
+        ServerFacade unauthorizedFacade = new ServerFacade(serverUrl);
+        try {
+            unauthorizedFacade.observeGame(testGameId);
+            fail("Expected an exception for unauthorized access");
+        } catch (Exception e) {
+            assertTrue(e.getMessage().contains("Not logged in"));
+        }
+    }
+
+    @Test
+    void observeGameFailureGameNotFound() {
+        try {
+            serverFacade.observeGame(99999); // Assuming this game ID doesn't exist
+            fail("Expected an exception for game not found");
+        } catch (Exception e) {
+            assertTrue(e.getMessage().contains("Observe game failed"));
         }
     }
 
