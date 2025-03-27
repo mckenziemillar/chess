@@ -18,7 +18,7 @@ public class ServerFacadeTests {
     private static int port;
     private static String serverUrl;
     private ServerFacade serverFacade;
-    private static final Random random = new Random();
+    private static final Random RANDOM = new Random();
     private static String testAuthToken;
     private static String testUsername;
     private static int testGameId;
@@ -37,7 +37,7 @@ public class ServerFacadeTests {
     @BeforeEach
     void setUp() throws Exception {
         serverFacade = new ServerFacade(serverUrl);
-        testUsername = "testUser_" + System.currentTimeMillis() + "_" + random.nextInt(1000);
+        testUsername = "testUser_" + System.currentTimeMillis() + "_" + RANDOM.nextInt(1000);
         AuthData authData = serverFacade.register(testUsername, "testPassword", testUsername + "@example.com");
         testAuthToken = authData.authToken();
         serverFacade.setAuthToken(testAuthToken); // Set the authToken for subsequent calls
@@ -47,7 +47,7 @@ public class ServerFacadeTests {
 
     @Test
     void registerSuccess() throws Exception {
-        String uniqueUsername = "testUser_" + System.currentTimeMillis() + "_" + random.nextInt(1000);
+        String uniqueUsername = "testUser_" + System.currentTimeMillis() + "_" + RANDOM.nextInt(1000);
         AuthData authData = serverFacade.register(uniqueUsername, "testPassword", "test" + System.currentTimeMillis() + "@example.com");
         assertNotNull(authData);
         assertNotNull(authData.authToken());
