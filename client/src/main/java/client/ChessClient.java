@@ -223,11 +223,13 @@ public class ChessClient {
             System.out.println(colLabelColor + "  a b c d e f g h" + reset);
             for (int row = 8; row >= 1; row--) {
                 System.out.print(rowLabelColor + row + " " + reset);
-                for (char col = 'a'; col <= 'h'; col++) {
+                for (char colChar = 'a'; colChar <= 'h'; colChar++) {
+                    int col = colChar - 'a' + 1;
                     ChessPosition pos = new ChessPosition(row, col);
                     ChessPiece piece = chessBoard.getPiece(pos);
                     String pieceChar = getPieceChar(piece);
-                    boolean isLight = (row + (col - 'a' + 1)) % 2 != 0;
+                    //boolean isLight = (row + (col - 'a' + 1)) % 2 != 0;
+                    boolean isLight = (row + col) % 2 != 0;
                     String bgColor = isLight ? lightSquareBg : darkSquareBg;
                     String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE) ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_BLACK);
                     System.out.print(bgColor + textColor + pieceChar + reset);
@@ -241,11 +243,13 @@ public class ChessClient {
             System.out.println(colLabelColor + "  h g f e d c b a" + reset);
             for (int row = 1; row <= 8; row++) {
                 System.out.print(rowLabelColor + row + " " + reset);
-                for (char col = 'h'; col >= 'a'; col--) {
+                for (char colChar = 'h'; colChar >= 'a'; colChar--) {
+                    int col = colChar - 'a' + 1;
                     ChessPosition pos = new ChessPosition(row, col);
                     ChessPiece piece = chessBoard.getPiece(pos);
                     String pieceChar = getPieceChar(piece);
-                    boolean isLight = (row + (col - 'a' + 1)) % 2 != 0;
+                    boolean isLight = (row + col) % 2 != 0;
+                    //boolean isLight = (row + (col - 'a' + 1)) % 2 != 0;
                     String bgColor = isLight ? lightSquareBg : darkSquareBg;
                     String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE) ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_WHITE);
                     System.out.print(bgColor + textColor + pieceChar + reset);
