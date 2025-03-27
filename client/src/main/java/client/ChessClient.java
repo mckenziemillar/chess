@@ -152,6 +152,7 @@ public class ChessClient {
                     break;
                 case "play game":
                     System.out.print("Enter the number of the game to join: ");
+                    populateGameListings();
                     if (scanner.hasNextInt()) {
                         int gameNumber = scanner.nextInt();
                         scanner.nextLine(); // Consume newline
@@ -204,6 +205,22 @@ public class ChessClient {
         }
     }
 
+    private void populateGameListings() {
+        try {
+            GameData[] games = serverFacade.listGames();
+            if (games != null) {
+                gameListings.clear();
+                for (int i = 0; i < games.length; i++) {
+                    gameListings.put(i + 1, games[i]);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error fetching game list: " + e.getMessage());
+            // Decide if you want to set gameListings to empty or handle the error differently
+            gameListings.clear();
+        }
+    }
+
     private void drawInitialBoard(String perspective) {
         System.out.println("\nInitial Chessboard:");
         ChessGame board = new ChessGame();
@@ -220,7 +237,7 @@ public class ChessClient {
 
         if (perspective.equalsIgnoreCase("white") || perspective.equalsIgnoreCase("observe")) {
             // White's perspective
-            System.out.println(colLabelColor + "  a b c d e f g h" + reset);
+            System.out.println(colLabelColor + "  a  b  c  d  e  f  g  h" + reset);
             for (int row = 8; row >= 1; row--) {
                 System.out.print(rowLabelColor + row + " " + reset);
                 for (char colChar = 'a'; colChar <= 'h'; colChar++) {
@@ -236,11 +253,11 @@ public class ChessClient {
                 }
                 System.out.println();
             }
-            System.out.println(colLabelColor + "  a b c d e f g h" + reset);
+            System.out.println(colLabelColor + "  a  b  c  d  e  f  g  h" + reset);
 
         } else if (perspective.equalsIgnoreCase("black")) {
             // Black's perspective
-            System.out.println(colLabelColor + "  h g f e d c b a" + reset);
+            System.out.println(colLabelColor + "  h  g  f  e  d  c  b  a" + reset);
             for (int row = 1; row <= 8; row++) {
                 System.out.print(rowLabelColor + row + " " + reset);
                 for (char colChar = 'h'; colChar >= 'a'; colChar--) {
@@ -256,7 +273,7 @@ public class ChessClient {
                 }
                 System.out.println();
             }
-            System.out.println(colLabelColor + "  h g f e d c b a" + reset);
+            System.out.println(colLabelColor + "  h  g  f  e  d  c  b  a" + reset);
         } else {
             System.out.println("Invalid perspective: " + perspective);
         }
