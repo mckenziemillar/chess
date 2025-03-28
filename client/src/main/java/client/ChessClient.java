@@ -1,5 +1,8 @@
 package client;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import model.GameData;
 import model.AuthData;
 import ui.EscapeSequences;
@@ -52,7 +55,7 @@ public class ChessClient {
                     break;
                 }
             }
-            System.out.println(); // Add an empty line for better readability
+            System.out.println();
         }
         scanner.close();
         System.out.println("Exiting Chess Client.");
@@ -71,39 +74,93 @@ public class ChessClient {
         try {
             switch (command.toLowerCase()) {
                 case "help":
-                    displayPreloginHelp();
+                    //displayPreloginHelp();
                     break;
                 case "quit":
                     break;
                 case "login":
-                    System.out.print("Username: ");
-                    String loginUsername = scanner.nextLine();
-                    System.out.print("Password: ");
-                    String loginPassword = scanner.nextLine();
-                    AuthData loginAuth = serverFacade.login(loginUsername, loginPassword);
-                    loggedIn = true;
-                    username = loginAuth.username();
-                    System.out.println("Successfully logged in as " + username + ".");
+                    handleLogin(scanner);
                     break;
                 case "register":
-                    System.out.print("Username: ");
-                    String registerUsername = scanner.nextLine();
-                    System.out.print("Password: ");
-                    String registerPassword = scanner.nextLine();
-                    System.out.print("Email: ");
-                    String registerEmail = scanner.nextLine();
-                    AuthData registerAuth = serverFacade.register(registerUsername, registerPassword, registerEmail);
-                    loggedIn = true;
-                    username = registerAuth.username();
-                    System.out.println("Successfully registered and logged in as " + username + ".");
+                    handleRegister(scanner);
                     break;
                 default:
                     System.out.println("Invalid command. Type 'help' for available commands.");
             }
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage()); // Display user-friendly error
+            System.out.println("An unexpected error occurred: " + e.getMessage());
         }
     }
+
+    private void handleLogin(Scanner scanner) {
+        System.out.print("Username: ");
+        String loginUsername = scanner.nextLine();
+        System.out.print("Password: ");
+        String loginPassword = scanner.nextLine();
+        try {
+            AuthData loginAuth = serverFacade.login(loginUsername, loginPassword);
+            loggedIn = true;
+            username = loginAuth.username();
+            System.out.println("Successfully logged in as " + username + ".");
+        } catch (Exception e) {
+            displayLoginError(e.getMessage());
+        }
+    }
+
+    private void handleRegister(Scanner scanner) {
+        System.out.print("Username: ");
+        String registerUsername = scanner.nextLine();
+        System.out.print("Password: ");
+        String registerPassword = scanner.nextLine();
+        System.out.print("Email: ");
+        String registerEmail = scanner.nextLine();
+        try {
+            AuthData registerAuth = serverFacade.register(registerUsername, registerPassword, registerEmail);
+            loggedIn = true;
+            username = registerAuth.username();
+            serverFacade.setAuthToken(registerAuth.authToken());
+            System.out.println("Successfully registered and logged in as " + username + ".");
+        } catch (Exception e) {
+            displayRegistrationError(e.getMessage());
+        }
+    }
+
+    private void displayLoginError(String errorMessage) {
+        if (errorMessage.startsWith("Login failed:") && errorMessage.contains("{") && errorMessage.contains("}")) {
+            try {
+                String jsonString = errorMessage.substring(errorMessage.indexOf("{"), errorMessage.lastIndexOf("}") + 1);
+                Gson gson = new Gson();
+                JsonObject errorJson = gson.fromJson(jsonString, JsonObject.class);
+                if (errorJson.has("message")) {
+                    System.out.println(errorJson.get("message").getAsString());
+                    return;
+                }
+            } catch (JsonParseException ex) {
+                System.out.println("Error: " + errorMessage);
+                return;
+            }
+        }
+        System.out.println("Error: " + errorMessage);
+    }
+
+    private void displayRegistrationError(String errorMessage) {
+        if (errorMessage.startsWith("Registration failed:") && errorMessage.contains("{") && errorMessage.contains("}")) {
+            try {
+                String jsonString = errorMessage.substring(errorMessage.indexOf("{"), errorMessage.lastIndexOf("}") + 1);
+                Gson gson = new Gson();
+                JsonObject errorJson = gson.fromJson(jsonString, JsonObject.class);
+                if (errorJson.has("message")) {
+                    System.out.println(errorJson.get("message").getAsString());
+                    return;
+                }
+            } catch (JsonParseException ex) {
+                System.out.println("Error: " + errorMessage);
+                return;
+            }
+        }
+        System.out.println("Error: " + errorMessage);
+    }
+
 
     private java.util.Map<Integer, GameData> gameListings = new java.util.HashMap<>();
 
@@ -123,7 +180,7 @@ public class ChessClient {
         try {
             switch (command.toLowerCase()) {
                 case "help":
-                    displayPostloginHelp();
+                    //displayPostloginHelp();
                     break;
                 case "logout":
                     serverFacade.logout();
@@ -218,7 +275,7 @@ public class ChessClient {
         System.out.print("Enter the number of the game to observe: ");
         if (!scanner.hasNextInt()) {
             System.out.println("Invalid input. Please enter a number.");
-            scanner.nextLine(); // Consume invalid input
+            scanner.nextLine();
             return;
         }
         int gameNumber = scanner.nextInt();
@@ -236,23 +293,6 @@ public class ChessClient {
             System.out.println("Error observing game: " + e.getMessage());
         }
     }
-
-
-    /*private void populateGameListings() {
-        try {
-            GameData[] games = serverFacade.listGames();
-            if (games != null) {
-                gameListings.clear();
-                for (int i = 0; i < games.length; i++) {
-                    gameListings.put(i + 1, games[i]);
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Error fetching game list: " + e.getMessage());
-            // Decide if you want to set gameListings to empty or handle the error differently
-            gameListings.clear();
-        }
-    }*/
 
     private void drawInitialBoard(String perspective) {
         System.out.println("\nInitial Chessboard:");
@@ -300,7 +340,6 @@ public class ChessClient {
                     ChessPiece piece = chessBoard.getPiece(pos);
                     String pieceChar = getPieceChar(piece);
                     boolean isLight = (row + col) % 2 != 0;
-                    //boolean isLight = (row + (col - 'a' + 1)) % 2 != 0;
                     String bgColor = isLight ? lightSquareBg : darkSquareBg;
                     String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE)
                             ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_WHITE);
