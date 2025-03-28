@@ -17,8 +17,8 @@ public class ChessClient {
 
     private final ServerFacade serverFacade;
     private boolean loggedIn = false;
-    private String username = null; // Store logged-in username
-    // Potentially store a mapping of listed game numbers to game IDs
+    private String username = null;
+    private final Gson gson = new Gson();
 
     public ChessClient(String serverUrl) {
         this.serverFacade = new ServerFacade(serverUrl);
@@ -103,7 +103,7 @@ public class ChessClient {
             username = loginAuth.username();
             System.out.println("Successfully logged in as " + username + ".");
         } catch (Exception e) {
-            displayLoginError(e.getMessage());
+            displayAuthError("Login failed:", e.getMessage());
         }
     }
 
@@ -121,33 +121,14 @@ public class ChessClient {
             serverFacade.setAuthToken(registerAuth.authToken());
             System.out.println("Successfully registered and logged in as " + username + ".");
         } catch (Exception e) {
-            displayRegistrationError(e.getMessage());
+            displayAuthError("Registration failed:", e.getMessage());
         }
     }
 
-    private void displayLoginError(String errorMessage) {
-        if (errorMessage.startsWith("Login failed:") && errorMessage.contains("{") && errorMessage.contains("}")) {
+    private void displayAuthError(String failureType, String errorMessage) {
+        if (errorMessage.startsWith(failureType) && errorMessage.contains("{") && errorMessage.contains("}")) {
             try {
                 String jsonString = errorMessage.substring(errorMessage.indexOf("{"), errorMessage.lastIndexOf("}") + 1);
-                Gson gson = new Gson();
-                JsonObject errorJson = gson.fromJson(jsonString, JsonObject.class);
-                if (errorJson.has("message")) {
-                    System.out.println(errorJson.get("message").getAsString());
-                    return;
-                }
-            } catch (JsonParseException ex) {
-                System.out.println("Error: " + errorMessage);
-                return;
-            }
-        }
-        System.out.println("Error: " + errorMessage);
-    }
-
-    private void displayRegistrationError(String errorMessage) {
-        if (errorMessage.startsWith("Registration failed:") && errorMessage.contains("{") && errorMessage.contains("}")) {
-            try {
-                String jsonString = errorMessage.substring(errorMessage.indexOf("{"), errorMessage.lastIndexOf("}") + 1);
-                Gson gson = new Gson();
                 JsonObject errorJson = gson.fromJson(jsonString, JsonObject.class);
                 if (errorJson.has("message")) {
                     System.out.println(errorJson.get("message").getAsString());
@@ -267,7 +248,7 @@ public class ChessClient {
             System.out.println("Joined game " + selectedGame.gameName() + " as " + colorChoice + ".");
             drawInitialBoard(colorChoice);
         } catch (Exception e) {
-            System.out.println("Error joining game: " + e.getMessage());
+            System.out.println("Error joining game: ");
         }
     }
 
