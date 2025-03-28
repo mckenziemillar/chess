@@ -1,14 +1,19 @@
 package ui;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 
 import java.net.URI;
+import java.lang.reflect.Type;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import model.AuthData;
 import model.GameData;
 
+import java.util.Collection;
+import java.util.List;
 public class ServerFacade {
 
     private final String serverUrl;
@@ -142,7 +147,7 @@ public class ServerFacade {
     }
 
 
-    public GameData[] listGames() throws Exception {
+    public ListGamesResult listGames() throws Exception {
         URI uri = URI.create(serverUrl + "/game");
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(uri)
@@ -153,7 +158,7 @@ public class ServerFacade {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() == 200) {
-            return gson.fromJson(response.body(), GameData[].class);
+            return gson.fromJson(response.body(), ListGamesResult.class);
         } else {
             throw new Exception("List games failed: " + response.body());
         }
@@ -173,6 +178,7 @@ public class ServerFacade {
     public record CreateGameRequest(String gameName) {}
     public record JoinGameRequest(int gameID, String playerColor) {}
     public record ObserveGameRequest(int gameID) {}
+    public record ListGamesResult(List<GameData> games) {}
     //public record AuthData(String authToken, String username) {}
     //public record GameData(int gameID, String gameName, String whiteUsername, String blackUsername) {}
 }

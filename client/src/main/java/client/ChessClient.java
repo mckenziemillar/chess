@@ -6,6 +6,8 @@ import ui.EscapeSequences;
 import ui.ServerFacade;
 import chess.*;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Scanner;
 
 public class ChessClient {
@@ -165,16 +167,16 @@ public class ChessClient {
     }
 
     private void handleListGames() throws Exception {
-        GameData[] games = serverFacade.listGames();
-        if (games == null || games.length == 0) {
+        List<GameData> games = serverFacade.listGames().games();
+        if (games == null || games.size() == 0) {
             System.out.println("No games currently available.");
             gameListings.clear();
             return;
         }
         System.out.println("Existing Games:");
         gameListings.clear();
-        for (int i = 0; i < games.length; i++) {
-            GameData game = games[i];
+        for (int i = 0; i < games.size(); i++) {
+            GameData game = games.get(i);
             gameListings.put(i + 1, game);
             System.out.printf("%d. %s (White: %s, Black: %s)\n",
                     i + 1, game.gameName(),
@@ -185,7 +187,6 @@ public class ChessClient {
 
     private void handlePlayGame(Scanner scanner) {
         System.out.print("Enter the number of the game to join: ");
-        populateGameListings();
         if (!scanner.hasNextInt()) {
             System.out.println("Invalid input. Please enter a number.");
             scanner.nextLine(); // Consume invalid input
@@ -222,7 +223,6 @@ public class ChessClient {
         }
         int gameNumber = scanner.nextInt();
         scanner.nextLine(); // Consume newline
-        populateGameListings();
         GameData selectedGame = gameListings.get(gameNumber);
         if (selectedGame == null) {
             System.out.println("Invalid game number.");
@@ -238,7 +238,7 @@ public class ChessClient {
     }
 
 
-    private void populateGameListings() {
+    /*private void populateGameListings() {
         try {
             GameData[] games = serverFacade.listGames();
             if (games != null) {
@@ -252,7 +252,7 @@ public class ChessClient {
             // Decide if you want to set gameListings to empty or handle the error differently
             gameListings.clear();
         }
-    }
+    }*/
 
     private void drawInitialBoard(String perspective) {
         System.out.println("\nInitial Chessboard:");

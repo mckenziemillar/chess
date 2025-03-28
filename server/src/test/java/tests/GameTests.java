@@ -24,11 +24,14 @@ class GameTests {
     void setUp() {
         try {
             testDataAccess = new TestDataAccess();
+            authService = new AuthService(testDataAccess);
+            gameService = new GameService(testDataAccess, authService);
+
+            // Create a default test user in the setUp method
+            String testUsername = "testUser";
         } catch (DataAccessException e) {
             throw new RuntimeException(e);
         }
-        authService = new AuthService(testDataAccess);
-        gameService = new GameService(testDataAccess, authService);
     }
 
     @Test

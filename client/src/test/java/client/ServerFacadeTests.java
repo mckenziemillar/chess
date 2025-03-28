@@ -7,6 +7,7 @@ import model.GameData;
 import ui.ServerFacade;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Collection;
 import java.util.Random;
 
 
@@ -132,9 +133,9 @@ public class ServerFacadeTests {
         GameData createdGame = serverFacade.createGame("Game to List");
         assertNotNull(createdGame);
 
-        GameData[] games = serverFacade.listGames();
+        Collection<GameData> games = serverFacade.listGames().games();
         assertNotNull(games);
-        assertTrue(games.length >= 1);
+        assertTrue(games.size() >= 1);
         boolean found = false;
         for (GameData game : games) {
             if (game.gameID() == createdGame.gameID() && game.gameName().equals(createdGame.gameName())) {
@@ -147,7 +148,7 @@ public class ServerFacadeTests {
 
     @Test
     void listGamesSuccessEmptyList() throws Exception {
-        GameData[] games = serverFacade.listGames();
+        Collection<GameData> games = serverFacade.listGames().games();
         assertNotNull(games);
     }
 
