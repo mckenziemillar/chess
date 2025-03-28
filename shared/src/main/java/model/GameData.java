@@ -8,9 +8,6 @@ public record GameData(int gameID, String whiteUsername, String blackUsername, S
         if (gameID <= 0) {
             throw new IllegalArgumentException("gameID cannot be negative or zero");
         }
-        /*if (gameName == null || game == null) {
-            throw new IllegalArgumentException("Fields cannot be null");
-        }*/
     }
 
 

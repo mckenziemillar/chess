@@ -105,6 +105,7 @@ public class ChessClient {
 
     private java.util.Map<Integer, GameData> gameListings = new java.util.HashMap<>();
 
+
     private void displayPostloginHelp() {
         System.out.println("\nChess Client - Postlogin (Logged in as " + username + ")");
         System.out.println("Available commands:");
@@ -116,7 +117,6 @@ public class ChessClient {
         System.out.println("  observe game- Observe an existing game");
         System.out.println("  quit        - Exit the program");
     }
-
     private void handlePostloginCommand(String command, Scanner scanner) {
         try {
             switch (command.toLowerCase()) {
@@ -128,81 +128,16 @@ public class ChessClient {
                     System.out.println("Successfully logged out.");
                     break;
                 case "create game":
-                    System.out.print("Enter the name for the new game: ");
-                    String gameName = scanner.nextLine().trim();
-                    if (gameName.isEmpty()) {
-                        System.out.println("Error: Game name cannot be empty. Please enter a name.");
-                    } else {
-                        try {
-                            GameData newGame = serverFacade.createGame(gameName);
-                            System.out.println("Created game: " + newGame.gameName() + ".");
-                        } catch (Exception e) {
-                            System.out.println("Error creating game: " + e.getMessage());
-                        }
-                }
-                break;
+                    handleCreateGame(scanner);
+                    break;
                 case "list games":
-                    GameData[] games = serverFacade.listGames();
-                    if (games != null && games.length > 0) {
-                        System.out.println("Existing Games:");
-                        gameListings.clear();
-                        for (int i = 0; i < games.length; i++) {
-                            GameData game = games[i];
-                            gameListings.put(i + 1, game);
-                            System.out.printf("%d. %s (White: %s, Black: %s)\n",
-                                    i + 1, game.gameName(),
-                                    game.whiteUsername() == null ? "Available" : game.whiteUsername(),
-                                    game.blackUsername() == null ? "Available" : game.blackUsername());
-                        }
-                    } else {
-                        System.out.println("No games currently available.");
-                    }
+                    handleListGames();
                     break;
                 case "play game":
-                    System.out.print("Enter the number of the game to join: ");
-                    populateGameListings();
-                    if (scanner.hasNextInt()) {
-                        int gameNumber = scanner.nextInt();
-                        scanner.nextLine(); // Consume newline
-                        GameData selectedGame = gameListings.get(gameNumber);
-                        if (selectedGame != null) {
-                            System.out.print("Enter the color you want to play (white/black): ");
-                            String colorChoice = scanner.nextLine().trim().toLowerCase();
-                            if (colorChoice.equals("white") || colorChoice.equals("black")) {
-                                serverFacade.joinGame(selectedGame.gameID(), colorChoice.toUpperCase());
-                                System.out.println("Joined game " + selectedGame.gameName() + " as " + colorChoice + ".");
-                                // *** DRAW INITIAL BOARD HERE (based on colorChoice) ***
-                                drawInitialBoard(colorChoice);
-                            } else {
-                                System.out.println("Invalid color choice. Please enter 'white' or 'black'.");
-                            }
-                        } else {
-                            System.out.println("Invalid game number.");
-                        }
-                    } else {
-                        System.out.println("Invalid input. Please enter a number.");
-                        scanner.nextLine(); // Consume invalid input
-                    }
+                    handlePlayGame(scanner);
                     break;
                 case "observe game":
-                    System.out.print("Enter the number of the game to observe: ");
-                    if (scanner.hasNextInt()) {
-                        int gameNumber = scanner.nextInt();
-                        scanner.nextLine(); // Consume newline
-                        populateGameListings();
-                        GameData selectedGame = gameListings.get(gameNumber);
-                        if (selectedGame != null) {
-                            serverFacade.observeGame(selectedGame.gameID());
-                            System.out.println("Observing game " + selectedGame.gameName() + ".");
-                            // *** DRAW INITIAL BOARD HERE (from white's perspective) ***
-                            drawInitialBoard("white");
-                        } else {
-                            System.out.println("Invalid game number.");
-                        }
-                    } else {
-                        System.out.println("Invalid input. Please enter a number.");
-                        scanner.nextLine(); // Consume invalid input
-                    }
+                    handleObserveGame(scanner);
                     break;
                 case "quit":
                     break;
@@ -210,9 +145,98 @@ public class ChessClient {
                     System.out.println("Invalid command. Type 'help' for available commands.");
             }
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage()); // Display user-friendly error
+            System.out.println("Error: " + e.getMessage());
         }
     }
+
+    private void handleCreateGame(Scanner scanner) {
+        System.out.print("Enter the name for the new game: ");
+        String gameName = scanner.nextLine().trim();
+        if (gameName.isEmpty()) {
+            System.out.println("Error: Game name cannot be empty. Please enter a name.");
+            return;
+        }
+        try {
+            GameData newGame = serverFacade.createGame(gameName);
+            System.out.println("Created game: " + newGame.gameName() + ".");
+        } catch (Exception e) {
+            System.out.println("Error creating game: " + e.getMessage());
+        }
+    }
+
+    private void handleListGames() throws Exception {
+        GameData[] games = serverFacade.listGames();
+        if (games == null || games.length == 0) {
+            System.out.println("No games currently available.");
+            gameListings.clear();
+            return;
+        }
+        System.out.println("Existing Games:");
+        gameListings.clear();
+        for (int i = 0; i < games.length; i++) {
+            GameData game = games[i];
+            gameListings.put(i + 1, game);
+            System.out.printf("%d. %s (White: %s, Black: %s)\n",
+                    i + 1, game.gameName(),
+                    game.whiteUsername() == null ? "Available" : game.whiteUsername(),
+                    game.blackUsername() == null ? "Available" : game.blackUsername());
+        }
+    }
+
+    private void handlePlayGame(Scanner scanner) {
+        System.out.print("Enter the number of the game to join: ");
+        populateGameListings();
+        if (!scanner.hasNextInt()) {
+            System.out.println("Invalid input. Please enter a number.");
+            scanner.nextLine(); // Consume invalid input
+            return;
+        }
+        int gameNumber = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+        GameData selectedGame = gameListings.get(gameNumber);
+        if (selectedGame == null) {
+            System.out.println("Invalid game number.");
+            return;
+        }
+        System.out.print("Enter the color you want to play (white/black): ");
+        String colorChoice = scanner.nextLine().trim().toLowerCase();
+        if (!colorChoice.equals("white") && !colorChoice.equals("black")) {
+            System.out.println("Invalid color choice. Please enter 'white' or 'black'.");
+            return;
+        }
+        try {
+            serverFacade.joinGame(selectedGame.gameID(), colorChoice.toUpperCase());
+            System.out.println("Joined game " + selectedGame.gameName() + " as " + colorChoice + ".");
+            drawInitialBoard(colorChoice);
+        } catch (Exception e) {
+            System.out.println("Error joining game: " + e.getMessage());
+        }
+    }
+
+    private void handleObserveGame(Scanner scanner) {
+        System.out.print("Enter the number of the game to observe: ");
+        if (!scanner.hasNextInt()) {
+            System.out.println("Invalid input. Please enter a number.");
+            scanner.nextLine(); // Consume invalid input
+            return;
+        }
+        int gameNumber = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+        populateGameListings();
+        GameData selectedGame = gameListings.get(gameNumber);
+        if (selectedGame == null) {
+            System.out.println("Invalid game number.");
+            return;
+        }
+        try {
+            serverFacade.observeGame(selectedGame.gameID());
+            System.out.println("Observing game " + selectedGame.gameName() + ".");
+            drawInitialBoard("white");
+        } catch (Exception e) {
+            System.out.println("Error observing game: " + e.getMessage());
+        }
+    }
+
 
     private void populateGameListings() {
         try {
@@ -257,7 +281,8 @@ public class ChessClient {
                     //boolean isLight = (row + (col - 'a' + 1)) % 2 != 0;
                     boolean isLight = (row + col) % 2 != 0;
                     String bgColor = isLight ? lightSquareBg : darkSquareBg;
-                    String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE) ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_BLACK);
+                    String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE)
+                            ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_BLACK);
                     System.out.print(bgColor + textColor + pieceChar + reset);
                 }
                 System.out.println();
@@ -277,7 +302,8 @@ public class ChessClient {
                     boolean isLight = (row + col) % 2 != 0;
                     //boolean isLight = (row + (col - 'a' + 1)) % 2 != 0;
                     String bgColor = isLight ? lightSquareBg : darkSquareBg;
-                    String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE) ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_WHITE);
+                    String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE)
+                            ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_WHITE);
                     System.out.print(bgColor + textColor + pieceChar + reset);
                 }
                 System.out.println();
