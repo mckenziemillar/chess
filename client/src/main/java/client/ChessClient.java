@@ -8,17 +8,26 @@ import model.AuthData;
 import ui.EscapeSequences;
 import ui.ServerFacade;
 import chess.*;
+import websocket.commands.UserGameCommand;
+import websocket.messages.ServerMessage;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.WebSocket;
 import java.util.Collection;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 public class ChessClient {
 
     private final ServerFacade serverFacade;
     private boolean loggedIn = false;
     private String username = null;
+    private String authToken = null;
     private final Gson gson = new Gson();
+    private WebSocket gameWebSocket;
 
     public ChessClient(String serverUrl) {
         this.serverFacade = new ServerFacade(serverUrl);
@@ -51,7 +60,10 @@ public class ChessClient {
                 if (command.equalsIgnoreCase("logout")) {
                     loggedIn = false;
                     username = null;
+                    authToken = null;
+                    closeWebSocket();
                 } else if (command.equalsIgnoreCase("quit")) {
+                    closeWebSocket();
                     break;
                 }
             }
@@ -60,7 +72,12 @@ public class ChessClient {
         scanner.close();
         System.out.println("Exiting Chess Client.");
     }
-
+    private void closeWebSocket() {
+        if (gameWebSocket != null) {
+            gameWebSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Client is closing");
+            gameWebSocket = null;
+        }
+    }
     private void displayPreloginHelp() {
         System.out.println("\nChess Client - Prelogin");
         System.out.println("Available commands:");
@@ -101,6 +118,8 @@ public class ChessClient {
             AuthData loginAuth = serverFacade.login(loginUsername, loginPassword);
             loggedIn = true;
             username = loginAuth.username();
+            authToken = loginAuth.authToken();
+            serverFacade.setAuthToken(authToken);
             System.out.println("Successfully logged in as " + username + ".");
         } catch (Exception e) {
             displayAuthError("Login failed:", e.getMessage());
@@ -118,7 +137,8 @@ public class ChessClient {
             AuthData registerAuth = serverFacade.register(registerUsername, registerPassword, registerEmail);
             loggedIn = true;
             username = registerAuth.username();
-            serverFacade.setAuthToken(registerAuth.authToken());
+            authToken = registerAuth.authToken();
+            serverFacade.setAuthToken(authToken);
             System.out.println("Successfully registered and logged in as " + username + ".");
         } catch (Exception e) {
             displayAuthError("Registration failed:", e.getMessage());
@@ -180,6 +200,7 @@ public class ChessClient {
                     handleObserveGame(scanner);
                     break;
                 case "quit":
+                    closeWebSocket();
                     break;
                 default:
                     System.out.println("Invalid command. Type 'help' for available commands.");
@@ -247,6 +268,7 @@ public class ChessClient {
             serverFacade.joinGame(selectedGame.gameID(), colorChoice.toUpperCase());
             System.out.println("Joined game " + selectedGame.gameName() + " as " + colorChoice + ".");
             drawInitialBoard(colorChoice);
+            connectWebSocket(selectedGame.gameID());
         } catch (Exception e) {
             System.out.println("Error joining game: ");
         }
@@ -270,10 +292,103 @@ public class ChessClient {
             serverFacade.observeGame(selectedGame.gameID());
             System.out.println("Observing game " + selectedGame.gameName() + ".");
             drawInitialBoard("white");
+            connectWebSocket(selectedGame.gameID());
         } catch (Exception e) {
             System.out.println("Error observing game: " + e.getMessage());
         }
     }
+
+    private void connectWebSocket(int gameID) {
+        String websocketUrl = "ws://localhost:8080/ws"; // Use 'ws' for WebSocket
+        HttpClient client = HttpClient.newHttpClient();
+        CompletableFuture<WebSocket> wsFuture = client.newWebSocketBuilder()
+                .buildAsync(URI.create(websocketUrl), new WebSocket.Listener() {
+                    @Override
+                    public void onOpen(WebSocket webSocket) {
+                        System.out.println("WebSocket connection opened.");
+                        gameWebSocket = webSocket;
+                        sendConnectMessage(gameWebSocket, gameID);
+                        webSocket.request(1); // Start receiving messages
+                    }
+
+                    //@Override
+                    public CompletionStage<?> onText(WebSocket webSocket, CharSequence data) {
+                        System.out.println("Received WebSocket message: " + data);
+                        handleWebSocketMessage(data.toString());
+                        webSocket.request(1);
+                        return CompletableFuture.completedFuture(null);
+                    }
+
+                    @Override
+                    public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+                        System.out.println("WebSocket connection closed: " + statusCode + " " + reason);
+                        gameWebSocket = null;
+                        return CompletableFuture.completedFuture(null);
+                    }
+
+                    @Override
+                    public void onError(WebSocket webSocket, Throwable error) {
+                        System.err.println("WebSocket error: " + error.getMessage());
+                        gameWebSocket = null;
+                    }
+                });
+
+        try {
+            gameWebSocket = wsFuture.get(); // Block until connection is established
+        } catch (Exception e) {
+            System.err.println("Error establishing WebSocket connection: " + e.getMessage());
+        }
+    }
+
+
+    private void sendConnectMessage(WebSocket webSocket, int gameID) {
+        if (authToken == null) {
+            System.err.println("Error: Not logged in, cannot send CONNECT message.");
+            return;
+        }
+        UserGameCommand connectCommand = new UserGameCommand(UserGameCommand.CommandType.CONNECT, authToken, gameID);
+        String jsonCommand = gson.toJson(connectCommand);
+        System.out.println("Sending WebSocket CONNECT message: " + jsonCommand);
+        webSocket.sendText(jsonCommand, true);
+    }
+
+    private void handleWebSocketMessage(String message) {
+        try {
+            ServerMessage serverMessage = gson.fromJson(message, ServerMessage.class);
+            switch (serverMessage.getServerMessageType()) {
+                case LOAD_GAME:
+                    System.out.println("Received LOAD_GAME message: " + message);
+                    // TODO: Implement logic to update the game board based on this message
+                    break;
+                case NOTIFICATION:
+                    // Assuming you'll create a specific NotificationMessage class with a 'message' field
+                    JsonObject jsonObject = gson.fromJson(message, JsonObject.class);
+                    if (jsonObject.has("message")) {
+                        String notification = jsonObject.get("message").getAsString();
+                        System.out.println("Notification: " + notification);
+                    } else {
+                        System.out.println("Received generic NOTIFICATION: " + message);
+                    }
+                    break;
+                case ERROR:
+                    // Assuming you'll create a specific ErrorMessage class with an 'errorMessage' field
+                    JsonObject errorObject = gson.fromJson(message, JsonObject.class);
+                    if (errorObject.has("errorMessage")) {
+                        String errorMessage = errorObject.get("errorMessage").getAsString();
+                        System.err.println("Server Error: " + errorMessage);
+                    } else {
+                        System.err.println("Received generic ERROR: " + message);
+                    }
+                    break;
+                default:
+                    System.out.println("Received unknown WebSocket message type: " + serverMessage.getServerMessageType());
+            }
+        } catch (JsonParseException e) {
+            System.err.println("Error parsing WebSocket message: " + e.getMessage());
+            System.err.println("Raw message: " + message);
+        }
+    }
+
 
     private void drawInitialBoard(String perspective) {
         System.out.println("\nInitial Chessboard:");

@@ -1,13 +1,7 @@
 package server;
 import dataaccess.DataAccessException;
 import dataaccess.MySqlDataAccess;
-import server.handler.ClearHandler;
-import server.handler.CreateGameHandler;
-import server.handler.RegisterHandler;
-import server.handler.JoinGameHandler;
-import server.handler.LoginHandler;
-import server.handler.LogoutHandler;
-import server.handler.ListGamesHandler;
+import server.handler.*;
 import dataaccess.MemoryDataAccess;
 import service.ClearService;
 import service.UserService;
@@ -56,9 +50,9 @@ public class Server {
         Spark.delete("/db", clearHandler::clear);
 
 
-        //This line initializes the server and can be removed once you have a functioning endpoint 
-        Spark.init();
+        Spark.webSocket("/ws", new WebSocketHandler(gameService, authService));
 
+        Spark.init();
         Spark.awaitInitialization();
         return Spark.port();
     }

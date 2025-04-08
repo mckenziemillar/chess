@@ -11,7 +11,7 @@ import chess.ChessGame;
 import java.util.Collection;
 import java.util.UUID;
 public class GameService {
-    private final DataAccess dataAccess;
+    public final DataAccess dataAccess;
     private final AuthService authService;
     //private int nextGameID = 1;
 
