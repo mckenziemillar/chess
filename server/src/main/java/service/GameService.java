@@ -1,12 +1,12 @@
 package service;
 
+import chess.*;
 import service.AuthService;
 import dataaccess.DataAccessException;
 import dataaccess.DataAccess;
 import dataaccess.MemoryDataAccess;
 import model.GameData;
 import model.AuthData;
-import chess.ChessGame;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -75,5 +75,133 @@ public class GameService {
         }
 
         dataAccess.updateGame(gameData); // Update the game in storage
+    }
+
+    public GameData makeMove(String authToken, int gameID, ChessMove move) throws DataAccessException {
+        // 1. Authenticate the user
+        AuthData authData = authService.getAuth(authToken);
+        if (authData == null) {
+            throw new DataAccessException("Error: unauthorized");
+        }
+        String username = authData.username();
+
+        // 2. Retrieve the GameData
+        GameData gameData = dataAccess.getGame(gameID);
+        if (gameData == null) {
+            throw new DataAccessException("Error: bad request - Game not found");
+        }
+
+        // 3. Validate the move
+        // Assuming you have chess logic classes to validate the move
+        ChessGame game = gameData.game();
+        if (!isValidMove(game, move, username)) {
+            throw new DataAccessException("Error: bad request - Invalid move");
+        }
+
+
+        // 4. Update the GameData
+        try {
+            game.makeMove(move); // Assuming ChessGame has a makeMove method
+        } catch (InvalidMoveException e) {
+            throw new RuntimeException(e);
+        }
+        GameData updatedGameData = new GameData(gameData.gameID(), gameData.whiteUsername(),
+                gameData.blackUsername(), gameData.gameName(), game);
+
+        // 5. Persist the updated GameData
+        dataAccess.updateGame(updatedGameData);
+
+        return updatedGameData;
+    }
+
+    private boolean isValidMove(ChessGame game, ChessMove move, String username) {
+        if (!isCorrectTurn(game, username, move)) {
+            return false;
+        }
+
+        // 2. Validate the move using ChessGame's validMoves method
+        ChessPosition startPosition = move.getStartPosition();
+        Collection<ChessMove> validMoves = game.validMoves(startPosition);
+        if (validMoves == null || !validMoves.contains(move)) {
+            return false;
+        }
+
+        // If all checks pass, the move is valid
+        return true;
+    }
+
+    private boolean isCorrectTurn(ChessGame game, String username, ChessMove move) {
+        ChessGame.TeamColor currentTurn = game.getTeamTurn();
+        ChessPiece piece = game.getBoard().getPiece(move.getStartPosition()); // Assuming ChessMove move is accessible here
+
+        if (piece == null) {
+            return false; // No piece at the start position
+        }
+
+        ChessGame.TeamColor pieceColor = piece.getTeamColor();
+
+        if (currentTurn == ChessGame.TeamColor.WHITE && pieceColor == ChessGame.TeamColor.WHITE) {
+            return true;
+        } else if (currentTurn == ChessGame.TeamColor.BLACK && pieceColor == ChessGame.TeamColor.BLACK) {
+            return true;
+        } else {
+            return false; // It's not the correct player's turn
+        }
+    }
+
+    public void leaveGame(String authToken, int gameID) throws DataAccessException {
+        // 1. Authenticate the user
+        AuthData authData = authService.getAuth(authToken);
+        if (authData == null) {
+            throw new DataAccessException("Error: unauthorized");
+        }
+        String username = authData.username();
+
+        // 2. Retrieve the GameData
+        GameData gameData = dataAccess.getGame(gameID);
+        if (gameData == null) {
+            throw new DataAccessException("Error: bad request - Game not found");
+        }
+
+        // 3. Update the GameData to remove the user
+        String whiteUsername = gameData.whiteUsername();
+        String blackUsername = gameData.blackUsername();
+        GameData updatedGameData = gameData; // Start with the original data
+
+        if (username.equals(whiteUsername)) {
+            updatedGameData = new GameData(gameData.gameID(), null, blackUsername, gameData.gameName(), gameData.game());
+        } else if (username.equals(blackUsername)) {
+            updatedGameData = new GameData(gameData.gameID(), whiteUsername, null, gameData.gameName(), gameData.game());
+        } else {
+            // User is not a player, simply return the game
+            return;
+        }
+
+        // 4. Persist the updated GameData
+        dataAccess.updateGame(updatedGameData);
+    }
+
+    public void resignGame(String authToken, int gameID) throws DataAccessException {
+        // 1. Authenticate the user
+        AuthData authData = authService.getAuth(authToken);
+        if (authData == null) {
+            throw new DataAccessException("Error: unauthorized");
+        }
+
+        // 2. Retrieve the GameData
+        GameData gameData = dataAccess.getGame(gameID);
+        if (gameData == null) {
+            throw new DataAccessException("Error: bad request - Game not found");
+        }
+
+        // 3. Update the GameData to mark the game as over
+        // Assuming you have a method in GameData to set the game over
+        // and a corresponding field (e.g., gameOver)
+        // gameData.setGameOver(true);
+        GameData updatedGameData = new GameData(gameData.gameID(), gameData.whiteUsername(),
+                gameData.blackUsername(), gameData.gameName(), gameData.game());
+
+        // 4. Persist the updated GameData
+        dataAccess.updateGame(updatedGameData);
     }
 }
