@@ -114,7 +114,19 @@ public class WebSocketHandler {
             // 4. Send NOTIFICATION message to other clients about the new connection
             // This part requires you to track sessions. For now, let's just print a message.
             addSession(gameID, session);
-            sendNotificationToAll(gameID, authToken, null, username + " connected to the game");
+            //sendNotificationToAll(gameID, authToken, null, username + " connected to the game");
+
+            Set<Session> sessions = gameSessions.get(gameID);
+            if (sessions != null) {
+                for (Session otherSession : sessions) {
+                    if (otherSession != session) { // Don't send the notification back to the connecting client
+                        ServerMessage notificationMessage = new ServerMessage(ServerMessage.ServerMessageType.NOTIFICATION);
+                        notificationMessage.setMessage(username + " connected to the game");
+                        sendMessage(otherSession, notificationMessage);
+                    }
+                }
+            }
+
 
         } catch (DataAccessException e) {
             sendError(session, e.getMessage());
