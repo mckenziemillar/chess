@@ -114,8 +114,8 @@ public class WebSocketHandler {
             // 4. Send NOTIFICATION message to other clients about the new connection
             // This part requires you to track sessions. For now, let's just print a message.
             addSession(gameID, session);
-            //sendNotificationToAll(gameID, authToken, null, username + " connected to the game");
 
+            //sendNotificationToAll(gameID, authToken, null, username + " connected to the game");
             Set<Session> sessions = gameSessions.get(gameID);
             if (sessions != null) {
                 for (Session otherSession : sessions) {
@@ -238,7 +238,7 @@ public class WebSocketHandler {
                 ServerMessage notificationMessage = new ServerMessage(ServerMessage.ServerMessageType.NOTIFICATION);
                 String message;
                 if (move != null) {
-                    String moveDescription = describeMove(move); // You'll need to implement this
+                    String moveDescription = describeMove(move);
                     message = username + " moved " + moveDescription;
                 } else {
                     message = username + " " + action;
@@ -247,13 +247,25 @@ public class WebSocketHandler {
 
                 // 4. Send the message to each session
                 for (Session session : sessions) {
-                    sendMessage(session, notificationMessage);
+                    AuthData sessionAuth = getAuthDataForSession(session);
+                    if (sessionAuth != null && !sessionAuth.authToken().equals(authToken)) { // Send to everyone EXCEPT the mover
+                        sendMessage(session, notificationMessage);
+                    }
                 }
             } catch (DataAccessException e) {
                 System.err.println("Error retrieving auth data for notification: " + e.getMessage());
             }
         }
     }
+
+    private AuthData getAuthDataForSession(Session session) {
+        // Implement logic to retrieve the AuthData associated with the WebSocket session.
+        // This might involve storing a mapping in your WebSocketHandler.
+        // For example:
+        // return sessionAuthMap.get(session);
+        return null; // Placeholder
+    }
+
 
     private String describeMove(ChessMove move) {
         // Implement logic to describe the move in a human-readable format
