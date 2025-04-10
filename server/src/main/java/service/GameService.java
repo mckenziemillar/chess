@@ -83,6 +83,7 @@ public class GameService {
         if (authData == null) {
             throw new DataAccessException("Error: unauthorized");
         }
+
         String username = authData.username();
 
         // 2. Retrieve the GameData
@@ -90,11 +91,15 @@ public class GameService {
         if (gameData == null) {
             throw new DataAccessException("Error: bad request - Game not found");
         }
+        if (gameData.isGameOver()) { // Assuming you have a boolean flag or method to check game over
+            throw new DataAccessException("Error: bad request - Game is over");
+        }
+
 
         // 3. Validate the move
         // Assuming you have chess logic classes to validate the move
         ChessGame game = gameData.game();
-        if (!isValidMove(game, move, username)) {
+        if (!isValidMove(game, move, username, gameID)) {
             throw new DataAccessException("Error: bad request - Invalid move");
         }
 
@@ -114,8 +119,8 @@ public class GameService {
         return updatedGameData;
     }
 
-    private boolean isValidMove(ChessGame game, ChessMove move, String username) {
-        if (!isCorrectTurn(game, username, move)) {
+    private boolean isValidMove(ChessGame game, ChessMove move, String username, int gameID) {
+        if (!isCorrectTurn(game, username, move, gameID)) {
             return false;
         }
 
@@ -130,7 +135,7 @@ public class GameService {
         return true;
     }
 
-    private boolean isCorrectTurn(ChessGame game, String username, ChessMove move) {
+    private boolean isCorrectTurn(ChessGame game, String username, ChessMove move, int gameID) {
         ChessGame.TeamColor currentTurn = game.getTeamTurn();
         ChessPiece piece = game.getBoard().getPiece(move.getStartPosition()); // Assuming ChessMove move is accessible here
 
@@ -139,14 +144,37 @@ public class GameService {
         }
 
         ChessGame.TeamColor pieceColor = piece.getTeamColor();
+        ChessGame.TeamColor playerColor = getPlayerColor(gameID, username);
 
-        if (currentTurn == ChessGame.TeamColor.WHITE && pieceColor == ChessGame.TeamColor.WHITE) {
-            return true;
-        } else if (currentTurn == ChessGame.TeamColor.BLACK && pieceColor == ChessGame.TeamColor.BLACK) {
-            return true;
-        } else {
-            return false; // It's not the correct player's turn
+        if (playerColor == null) {
+            return false; // Could not determine player's color
         }
+        if (playerColor != pieceColor) {
+            return false; // Player is trying to move the opponent's piece
+        }
+
+        if (currentTurn != playerColor) {
+            return false; // It's not the player's turn
+        }
+
+        return true;
+    }
+
+    private ChessGame.TeamColor getPlayerColor(int gameID, String username) {
+        GameData gameData = null; // Assuming ChessGame has getGameId()
+        try {
+            gameData = dataAccess.getGame(gameID);
+        } catch (DataAccessException e) {
+            throw new RuntimeException(e);
+        }
+        if (gameData != null) {
+            if (username.equals(gameData.whiteUsername())) {
+                return ChessGame.TeamColor.WHITE;
+            } else if (username.equals(gameData.blackUsername())) {
+                return ChessGame.TeamColor.BLACK;
+            }
+        }
+        return null; // Observer or invalid username
     }
 
     public void leaveGame(String authToken, int gameID) throws DataAccessException {

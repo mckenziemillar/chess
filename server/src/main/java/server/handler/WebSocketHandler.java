@@ -32,6 +32,7 @@ public class WebSocketHandler {
 
     // WebSocket Session Management
     private final Map<Integer, Set<Session>> gameSessions = new HashMap<>();
+    private final Map<Session, AuthData> sessionAuthMap = new HashMap<>();
 
     public WebSocketHandler(GameService gameService, AuthService authService) {
         this.gameService = gameService;
@@ -48,6 +49,7 @@ public class WebSocketHandler {
     public void onClose(Session session, int statusCode, String reason) {
         System.out.println("WebSocket closed: " + statusCode + " - " + reason);
         removeSession(session); // Remove the session on close
+        sessionAuthMap.remove(session);
         // Handle disconnection logic (e.g., remove user from game)
     }
 
@@ -114,6 +116,7 @@ public class WebSocketHandler {
             // 4. Send NOTIFICATION message to other clients about the new connection
             // This part requires you to track sessions. For now, let's just print a message.
             addSession(gameID, session);
+            sessionAuthMap.put(session, authData);
 
             //sendNotificationToAll(gameID, authToken, null, username + " connected to the game");
             Set<Session> sessions = gameSessions.get(gameID);
@@ -153,20 +156,21 @@ public class WebSocketHandler {
             }
 
             // 5. Validate the move using gameService (which also updates the game state)
-            GameData updatedGameData = gameService.makeMove(command.getAuthToken(), command.getGameID(), move); // Assuming GameService has a makeMove method
-            if (updatedGameData == null) {
-                sendError(session, "Error: bad request - Invalid move");
-                return;
+            GameData updatedGameData = null;
+            try {
+                updatedGameData = gameService.makeMove(command.getAuthToken(), command.getGameID(), move);
+            } catch (DataAccessException e) {
+                sendError(session, "Error: bad request - " + e.getMessage()); // Send specific error message
+                return; // IMPORTANT: Exit the method after sending the error
             }
 
-            // 6. Send a LOAD_GAME message to all clients
-            sendLoadGameToAll(command.getGameID(), updatedGameData);
+            if (updatedGameData != null) {
+                // 3. Send a LOAD_GAME message to all clients
+                sendLoadGameToAll(command.getGameID(), updatedGameData);
 
-            // 7. Send a NOTIFICATION message to other clients about the move
-            sendNotificationToAll(command.getGameID(), command.getAuthToken(), move, describeMove(move));
-
-        } catch (DataAccessException e) {
-            sendError(session, e.getMessage());
+                // 4. Send a NOTIFICATION message to other clients about the move
+                sendNotificationToAll(command.getGameID(), command.getAuthToken(), move, describeMove(move));
+            }
         } catch (Exception e) { // Catch generic Exception to handle JsonParseException and other potential issues
             sendError(session, "Error processing WebSocket message: " + e.getMessage());
         }
@@ -198,6 +202,12 @@ public class WebSocketHandler {
 
             // 2. Send a NOTIFICATION message to all clients about the resignation
             sendNotificationToAll(command.getGameID(), command.getAuthToken(), null, "resigned from the game");
+
+            ServerMessage resignAcknowledgement = new ServerMessage(ServerMessage.ServerMessageType.NOTIFICATION);
+            AuthData authData = getAuthDataForSession(session);
+            String username = (authData != null) ? authData.username() : "You";
+            resignAcknowledgement.setMessage("You have resigned from the game.");
+            sendMessage(session, resignAcknowledgement);
 
         } catch (DataAccessException e) {
             sendError(session, e.getMessage());
@@ -252,6 +262,11 @@ public class WebSocketHandler {
                         sendMessage(session, notificationMessage);
                     }
                 }
+
+                /*for (Session session : sessions) {
+                    sendMessage(session, notificationMessage);
+                }*/
+
             } catch (DataAccessException e) {
                 System.err.println("Error retrieving auth data for notification: " + e.getMessage());
             }
@@ -259,11 +274,7 @@ public class WebSocketHandler {
     }
 
     private AuthData getAuthDataForSession(Session session) {
-        // Implement logic to retrieve the AuthData associated with the WebSocket session.
-        // This might involve storing a mapping in your WebSocketHandler.
-        // For example:
-        // return sessionAuthMap.get(session);
-        return null; // Placeholder
+        return sessionAuthMap.get(session);
     }
 
 
