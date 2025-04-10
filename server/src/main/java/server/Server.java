@@ -37,6 +37,7 @@ public class Server {
         LogoutHandler logoutHandler = new LogoutHandler(authService);
         ListGamesHandler listGamesHandler = new ListGamesHandler(gameService);
 
+        Spark.webSocket("/ws", new WebSocketHandler(gameService, authService));
         // Register your endpoints and handle exceptions here.
         Spark.get("/", (req, res) -> {
             return "Hello, world! ♕ 240 Chess Server is running.";
@@ -50,7 +51,7 @@ public class Server {
         Spark.delete("/db", clearHandler::clear);
 
 
-        Spark.webSocket("/ws", new WebSocketHandler(gameService, authService));
+
 
         Spark.init();
         Spark.awaitInitialization();
