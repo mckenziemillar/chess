@@ -9,11 +9,14 @@ import model.GameData;
 import model.AuthData;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
+
+
 public class GameService {
     public final DataAccess dataAccess;
     private final AuthService authService;
-    //private int nextGameID = 1;
+
 
     public GameService() {
         this.dataAccess = new MemoryDataAccess();
@@ -77,6 +80,7 @@ public class GameService {
         dataAccess.updateGame(gameData); // Update the game in storage
     }
 
+
     public GameData makeMove(String authToken, int gameID, ChessMove move) throws DataAccessException {
         // 1. Authenticate the user
         AuthData authData = authService.getAuth(authToken);
@@ -90,9 +94,6 @@ public class GameService {
         GameData gameData = dataAccess.getGame(gameID);
         if (gameData == null) {
             throw new DataAccessException("Error: bad request - Game not found");
-        }
-        if (gameData.isGameOver()) { // Assuming you have a boolean flag or method to check game over
-            throw new DataAccessException("Error: bad request - Game is over");
         }
 
 

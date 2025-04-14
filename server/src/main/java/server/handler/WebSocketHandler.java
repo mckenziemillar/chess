@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @WebSocket
 public class WebSocketHandler {
@@ -33,6 +34,7 @@ public class WebSocketHandler {
     // WebSocket Session Management
     private final Map<Integer, Set<Session>> gameSessions = new HashMap<>();
     private final Map<Session, AuthData> sessionAuthMap = new HashMap<>();
+    private final Map<Integer, Boolean> gameIsOver = new ConcurrentHashMap<>();
 
     public WebSocketHandler(GameService gameService, AuthService authService) {
         this.gameService = gameService;
@@ -154,6 +156,10 @@ public class WebSocketHandler {
                 sendError(session, "Error: bad request - Invalid move format");
                 return;
             }
+            if (gameIsOver.getOrDefault(command.getGameID(), false)) {
+                sendError(session, "Error: bad request - Game is over");
+                return;
+            }
 
             // 5. Validate the move using gameService (which also updates the game state)
             GameData updatedGameData = null;
@@ -197,15 +203,25 @@ public class WebSocketHandler {
         System.out.println("RESIGN command received");
 
         try {
+            AuthData authData = getAuthDataForSession(session);
+            String username = authData.username();
+            Integer gameID = command.getGameID();
+            GameData gameData = gameService.dataAccess.getGame(gameID);
+            if (gameData == null || (!username.equals(gameData.whiteUsername()) && !username.equals(gameData.blackUsername()))) {
+                // If the user is not a player (likely an observer), send an error
+                sendError(session, "Error: bad request - Observers cannot resign.");
+                return;
+            }
+
             // 1. Mark the game as over due to resignation
             gameService.resignGame(command.getAuthToken(), command.getGameID()); // Assuming you have a resignGame method
-
+            gameIsOver.put(command.getGameID(), true);
             // 2. Send a NOTIFICATION message to all clients about the resignation
             sendNotificationToAll(command.getGameID(), command.getAuthToken(), null, "resigned from the game");
 
             ServerMessage resignAcknowledgement = new ServerMessage(ServerMessage.ServerMessageType.NOTIFICATION);
-            AuthData authData = getAuthDataForSession(session);
-            String username = (authData != null) ? authData.username() : "You";
+            //AuthData authData = getAuthDataForSession(session);
+            //String username = (authData != null) ? authData.username() : "You";
             resignAcknowledgement.setMessage("You have resigned from the game.");
             sendMessage(session, resignAcknowledgement);
 
