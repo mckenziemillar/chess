@@ -11,23 +11,29 @@ import chess.*;
 import websocket.commands.UserGameCommand;
 import websocket.messages.ServerMessage;
 
+import javax.websocket.*;
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
-import java.util.Collection;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-public class ChessClient {
+
+public class ChessClient extends Endpoint{
 
     private final ServerFacade serverFacade;
     private boolean loggedIn = false;
     private String username = null;
     private String authToken = null;
     private final Gson gson = new Gson();
-    private WebSocket gameWebSocket;
+    //private WebSocket gameWebSocket;
+    private Session session;
+    private ChessGame currentChessGame = null;
+    private String playerColor = null;
 
     public ChessClient(String serverUrl) {
         this.serverFacade = new ServerFacade(serverUrl);
@@ -73,9 +79,16 @@ public class ChessClient {
         System.out.println("Exiting Chess Client.");
     }
     private void closeWebSocket() {
-        if (gameWebSocket != null) {
-            gameWebSocket.sendClose(WebSocket.NORMAL_CLOSURE, "Client is closing");
-            gameWebSocket = null;
+        if (this.session != null && this.session.isOpen()) {
+            try {
+                this.session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "Client logging out"));
+            } catch (IOException e) {
+                System.err.println("Error closing WebSocket session: " + e.getMessage());
+            } finally {
+                this.session = null;
+            }
+        } else {
+            this.session = null;
         }
     }
     private void displayPreloginHelp() {
@@ -179,6 +192,7 @@ public class ChessClient {
     }
     private void handlePostloginCommand(String command, Scanner scanner) {
         try {
+            //int gameID = -1;
             switch (command.toLowerCase()) {
                 case "help":
                     //displayPostloginHelp();
@@ -205,6 +219,9 @@ public class ChessClient {
                 default:
                     System.out.println("Invalid command. Type 'help' for available commands.");
             }
+            /*if (command.toLowerCase().startsWith("play game") || command.toLowerCase().startsWith("observe game")) {
+                handleGameplay(scanner, gameID);
+            }*/
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
@@ -244,63 +261,277 @@ public class ChessClient {
         }
     }
 
-    private void handlePlayGame(Scanner scanner) {
+    private int handlePlayGame(Scanner scanner) {
         System.out.print("Enter the number of the game to join: ");
         if (!scanner.hasNextInt()) {
             System.out.println("Invalid input. Please enter a number.");
             scanner.nextLine(); // Consume invalid input
-            return;
+            return 0;
         }
         int gameNumber = scanner.nextInt();
         scanner.nextLine(); // Consume newline
         GameData selectedGame = gameListings.get(gameNumber);
         if (selectedGame == null) {
             System.out.println("Invalid game number.");
-            return;
+            return gameNumber;
         }
         System.out.print("Enter the color you want to play (white/black): ");
         String colorChoice = scanner.nextLine().trim().toLowerCase();
         if (!colorChoice.equals("white") && !colorChoice.equals("black")) {
             System.out.println("Invalid color choice. Please enter 'white' or 'black'.");
-            return;
+            return gameNumber;
         }
         try {
             serverFacade.joinGame(selectedGame.gameID(), colorChoice.toUpperCase());
             System.out.println("Joined game " + selectedGame.gameName() + " as " + colorChoice + ".");
+            this.playerColor = colorChoice;
             drawInitialBoard(colorChoice);
             connectWebSocket(selectedGame.gameID());
+            if (this.session != null && this.session.isOpen()) {
+                gameNumber = selectedGame.gameID();
+                handleGameplay(scanner, selectedGame.gameID());
+            } else {
+                System.out.println("Failed to establish WebSocket connection. Returning to menu.");
+                // Optionally try to leave the game server-side if join succeeded but WS failed
+            }
+            //sendConnectMessage(selectedGame.gameID());
+            //might need this idk
         } catch (Exception e) {
             System.out.println("Error joining game: ");
         }
+        return gameNumber;
     }
 
-    private void handleObserveGame(Scanner scanner) {
+    private int handleObserveGame(Scanner scanner) {
         System.out.print("Enter the number of the game to observe: ");
         if (!scanner.hasNextInt()) {
             System.out.println("Invalid input. Please enter a number.");
             scanner.nextLine();
-            return;
+            return -1;
         }
         int gameNumber = scanner.nextInt();
-        scanner.nextLine(); // Consume newline
+        scanner.nextLine();
         GameData selectedGame = gameListings.get(gameNumber);
         if (selectedGame == null) {
             System.out.println("Invalid game number.");
-            return;
+            return -1;
         }
         try {
             serverFacade.observeGame(selectedGame.gameID());
             System.out.println("Observing game " + selectedGame.gameName() + ".");
             drawInitialBoard("white");
             connectWebSocket(selectedGame.gameID());
+            if (this.session != null && this.session.isOpen()) {
+                gameNumber = selectedGame.gameID();
+                handleGameplay(scanner, selectedGame.gameID());
+            } else {
+                System.out.println("Failed to establish WebSocket connection for observation. Returning to menu.");
+            }
         } catch (Exception e) {
             System.out.println("Error observing game: " + e.getMessage());
         }
+        return gameNumber;
     }
 
+    private void handleGameplay(Scanner scanner, int gameID) {
+        System.out.println("\n--- Gameplay for Game: " + gameID + " ---");
+        System.out.println("Available commands (type 'help'):");
+        //GAMEPLAY LOOP
+        while (loggedIn && this.session != null && this.session.isOpen()) {
+            System.out.print(username + " (Game " + gameID + ") >> ");
+            String command = scanner.nextLine().trim().toLowerCase();
+            handleGameplayCommand(command, scanner, gameID, this.session);
+        }
+        System.out.println("Exiting gameplay for game " + gameID + ".");
+        closeWebSocket();
+        //^this might not be neccessary idk
+    }
+
+
+    private void handleGameplayCommand(String command, Scanner scanner, int gameID, Session currentSession) {
+        switch (command) {
+            case "help":
+                displayGameplayHelp();
+                break;
+            case "redraw board":
+                handleRedrawBoard(gameID, currentSession);
+                break;
+            case "leave":
+                handleLeave(gameID, currentSession);
+                break;
+            case "make move":
+                handleMakeMove(scanner, gameID, currentSession);
+                break;
+            case "resign":
+                handleResign(scanner, gameID, currentSession);
+                break;
+            case "highlight legal moves":
+                handleHighlightLegalMoves(scanner, gameID, currentSession);
+                break;
+            default:
+                System.out.println("Invalid gameplay command. Type 'help' for available commands.");
+        }
+    }
+    private void displayGameplayHelp() {
+        System.out.println("Available commands:");
+        System.out.println("  help                    - Display available commands");
+        System.out.println("  redraw board            - Redraw the chess board");
+        System.out.println("  leave                   - Leave the game");
+        System.out.println("  make move <start> <end> - Make a move (e.g., a2 a4)");
+        System.out.println("  resign                  - Resign the game");
+        System.out.println("  highlight legal moves   - Highlight legal moves for a piece");
+    }
+
+    private void handleRedrawBoard(int gameID, Session currentSession) {
+        try {
+            sendRedrawBoardRequest(gameID, currentSession);
+        } catch (Exception e) {
+            System.err.println("Error requesting board redraw: " + e.getMessage());
+            // Handle the error appropriately (e.g., display an error message to the user)
+        }
+    }
+
+    private void sendRedrawBoardRequest(int gameID, Session currentSession) {
+        UserGameCommand redrawCommand = new UserGameCommand(
+                UserGameCommand.CommandType.REDRAW_BOARD,
+                authToken,
+                gameID
+        );
+        String jsonCommand = gson.toJson(redrawCommand);
+        try {
+            currentSession.getBasicRemote().sendText(jsonCommand);
+        } catch (IOException e) {
+            System.err.println("Error sending LEAVE command: " + e.getMessage());
+        }
+        System.out.println("Sent REDRAW_BOARD command to server.");
+    }
+
+    private void handleLeave(int gameID, Session currentSession) {
+        sendLeaveCommand(gameID, currentSession);
+        closeWebSocket(); // Close the connection
+        System.out.println("Left game. Returning to post-login menu.");
+    }
+
+    private void sendLeaveCommand(int gameID, Session currentSession) {
+        UserGameCommand leaveCommand = new UserGameCommand(UserGameCommand.CommandType.LEAVE, authToken, gameID);
+        String jsonCommand = gson.toJson(leaveCommand);
+        try {
+            currentSession.getBasicRemote().sendText(jsonCommand);
+        } catch (IOException e) {
+            System.err.println("Error sending LEAVE command: " + e.getMessage());
+        }
+    }
+
+    private void handleMakeMove(Scanner scanner, int gameID, Session currentSession) {
+        System.out.print("Enter move (e.g., a2 a4): ");
+        String moveInput = scanner.nextLine().trim();
+        String[] parts = moveInput.split("\\s+");
+        if (parts.length == 2) {
+            try {
+                ChessMove move = parseMove(parts[0], parts[1]);
+                sendMakeMoveCommand(gameID, currentSession, move);
+            } catch (IllegalArgumentException e) {
+                System.out.println("Invalid move format: " + e.getMessage());
+            }
+        } else {
+            System.out.println("Invalid move format. Please use: <start> <end> (e.g., a2 a4)");
+        }
+    }
+
+    private ChessMove parseMove(String start, String end) {
+        try {
+            ChessPosition startPos = parsePosition(start);
+            ChessPosition endPos = parsePosition(end);
+            return new ChessMove(startPos, endPos, null); // Promotion is handled later
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid move format: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private ChessPosition parsePosition(String position) {
+        if (position.length() != 2) {
+            throw new IllegalArgumentException("Invalid position format.");
+        }
+        char file = position.charAt(0);
+        char rank = position.charAt(1);
+        if (file < 'a' || file > 'h' || rank < '1' || rank > '8') {
+            throw new IllegalArgumentException("Invalid position format.");
+        }
+        int col = file - 'a' + 1;
+        int row = rank - '1' + 1;
+        return new ChessPosition(row, col);
+    }
+
+    private void sendMakeMoveCommand(int gameID, Session currentSession, ChessMove move) {
+        UserGameCommand moveCommand = new UserGameCommand(UserGameCommand.CommandType.MAKE_MOVE, authToken, gameID, move);
+        String jsonCommand = gson.toJson(moveCommand);
+        try {
+            currentSession.getBasicRemote().sendText(jsonCommand);
+        } catch (IOException e) {
+            System.err.println("Error sending LEAVE command: " + e.getMessage());
+        }
+    }
+    private void handleResign(Scanner scanner, int gameID, Session currentSession) {
+        System.out.print("Are you sure you want to resign? (yes/no): ");
+        String confirmation = scanner.nextLine().trim().toLowerCase();
+        if (confirmation.equals("yes")) {
+            sendResignCommand(gameID, currentSession);
+        } else {
+            System.out.println("Resignation cancelled.");
+        }
+    }
+
+    private void sendResignCommand(int gameID, Session currentSession) {
+        UserGameCommand resignCommand = new UserGameCommand(UserGameCommand.CommandType.RESIGN, authToken, gameID);
+        String jsonCommand = gson.toJson(resignCommand);
+        try {
+            currentSession.getBasicRemote().sendText(jsonCommand);
+        } catch (IOException e) {
+            System.err.println("Error sending LEAVE command: " + e.getMessage());
+        }
+    }
+
+    private void handleHighlightLegalMoves(Scanner scanner, int gameID, Session currentSession) {
+        System.out.print("Enter the square of the piece to highlight (e.g., a2): ");
+        String square = scanner.nextLine().trim();
+        try {
+            ChessPosition position = parsePosition(square);
+            // Calculate legal moves (client-side implementation).
+            // Collection<ChessMove> legalMoves = calculateLegalMoves(position); // Implement this
+            // Update the UI to highlight the piece and the legal moves.
+            System.out.println("Highlighting legal moves for " + square + " (not yet implemented).");
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid square format: " + e.getMessage());
+        }
+    }
+
+// Implement calculateLegalMoves to determine the valid moves
+
+
     private void connectWebSocket(int gameID) {
-        String websocketUrl = "ws://localhost:8080/ws"; // Use 'ws' for WebSocket
-        HttpClient client = HttpClient.newHttpClient();
+        String websocketUrl = "ws://localhost:8080/ws";
+        try {
+            URI socketURI = new URI(websocketUrl);
+            WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+            this.session = container.connectToServer(this, socketURI);
+
+            this.session.addMessageHandler(new MessageHandler.Whole<String>(){
+                @Override
+                public void onMessage(String message){
+                    System.out.println("onMessage recieved");
+                    handleWebSocketMessage(message);
+                }
+            });
+            sendConnectMessage(gameID);
+        } catch (URISyntaxException e) {
+            this.session = null;
+            throw new RuntimeException(e);
+        } catch (DeploymentException | IOException e) {
+            throw new RuntimeException(e);
+        }
+
+       /*HttpClient client = HttpClient.newHttpClient();
         CompletableFuture<WebSocket> wsFuture = client.newWebSocketBuilder()
                 .buildAsync(URI.create(websocketUrl), new WebSocket.Listener() {
                     @Override
@@ -312,7 +543,7 @@ public class ChessClient {
                     }
 
                     //@Override
-                    public CompletionStage<?> onText(WebSocket webSocket, CharSequence data) {
+                    public CompletionStage<?> onMessage(WebSocket webSocket, CharSequence data) {
                         System.out.println("Received WebSocket message: " + data);
                         handleWebSocketMessage(data.toString());
                         webSocket.request(1);
@@ -337,11 +568,16 @@ public class ChessClient {
             gameWebSocket = wsFuture.get(); // Block until connection is established
         } catch (Exception e) {
             System.err.println("Error establishing WebSocket connection: " + e.getMessage());
-        }
+        }*/
+    }
+
+    @Override
+    public void onOpen(Session session, EndpointConfig endConfig){
+
     }
 
 
-    private void sendConnectMessage(WebSocket webSocket, int gameID) {
+    private void sendConnectMessage(int gameID) {
         if (authToken == null) {
             System.err.println("Error: Not logged in, cannot send CONNECT message.");
             return;
@@ -349,7 +585,12 @@ public class ChessClient {
         UserGameCommand connectCommand = new UserGameCommand(UserGameCommand.CommandType.CONNECT, authToken, gameID);
         String jsonCommand = gson.toJson(connectCommand);
         System.out.println("Sending WebSocket CONNECT message: " + jsonCommand);
-        webSocket.sendText(jsonCommand, true);
+        //.webSocket.sendText(jsonCommand, true);
+        try {
+            this.session.getBasicRemote().sendText(jsonCommand);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void handleWebSocketMessage(String message) {
@@ -358,10 +599,56 @@ public class ChessClient {
             switch (serverMessage.getServerMessageType()) {
                 case LOAD_GAME:
                     System.out.println("Received LOAD_GAME message: " + message);
-                    // TODO: Implement logic to update the game board based on this message
+                    /*if (serverMessage.getGame() != null) {
+                        GameData gameData = (GameData) serverMessage.getGame();
+                        //drawBoard(gameData, determinePerspective(gameData));
+                        if (gameData != null && gameData.game() != null) {
+                            this.currentChessGame = gameData.game(); // Store the game state
+                            String perspective = determinePerspective(gameData);
+                            drawBoard(gameData, perspective); // Draw the received board
+                        } else {
+                            System.err.println("Error: LOAD_GAME data or game object is null.");
+                        }
+                    } else {
+                        System.err.println("Error: LOAD_GAME message does not contain game data.");
+                    }
+                    break;*/
+                    Object gamePayload = serverMessage.getGame(); // Get the payload object
+                    if (gamePayload != null) {
+                        GameData gameData = null;
+                        try {
+                            // Convert the generic payload object back to JSON, then parse into GameData
+                            String gameJson = gson.toJson(gamePayload);
+                            gameData = gson.fromJson(gameJson, GameData.class);
+
+                            // **Important**: If ChessGame, ChessBoard, or ChessPiece are interfaces
+                            // or abstract classes, Gson needs TypeAdapters to deserialize them correctly.
+                            // If you haven't configured Gson with these, gameData.game() might still be null
+                            // or incomplete even if gson.fromJson doesn't throw an error here.
+
+                        } catch (JsonParseException | ClassCastException e) {
+                            System.err.println("Error parsing GameData from LOAD_GAME payload: " + e.getMessage());
+                            e.printStackTrace(); // Print full stack trace for details
+                        }
+
+                        // Now check the deserialized gameData
+                        if (gameData != null && gameData.game() != null && gameData.game().getBoard() != null) {
+                            this.currentChessGame = gameData.game();
+                            String perspective = determinePerspective(gameData);
+                            drawBoard(gameData, perspective); // Draw the received board
+                        } else {
+                            System.err.println("Error: LOAD_GAME data, game object, or board is null after parsing.");
+                            if(gameData != null && gameData.game() == null) System.err.println("DEBUG: gameData.game() is null.");
+                            if(gameData != null && gameData.game() != null && gameData.game().getBoard() == null) System.err.println("DEBUG: gameData.game().getBoard() is null.");
+
+                        }
+                    } else {
+                        System.err.println("Error: LOAD_GAME message payload field is null.");
+                    }
+                    displayGameplayHelp();
+                    System.out.print(username + " >> ");
                     break;
                 case NOTIFICATION:
-                    // Assuming you'll create a specific NotificationMessage class with a 'message' field
                     JsonObject jsonObject = gson.fromJson(message, JsonObject.class);
                     if (jsonObject.has("message")) {
                         String notification = jsonObject.get("message").getAsString();
@@ -386,6 +673,19 @@ public class ChessClient {
         } catch (JsonParseException e) {
             System.err.println("Error parsing WebSocket message: " + e.getMessage());
             System.err.println("Raw message: " + message);
+        }
+    }
+
+    private String determinePerspective(GameData gameData){
+        if (this.playerColor != null) {
+            return this.playerColor;
+        }
+        if (gameData != null && gameData.whiteUsername() != null && username.equals(gameData.whiteUsername())) {
+            return "white";
+        } else if (gameData != null && gameData.blackUsername() != null && username.equals(gameData.blackUsername())) {
+            return "black";
+        } else {
+            return "white";
         }
     }
 
@@ -488,5 +788,68 @@ public class ChessClient {
             }
         }
         return EscapeSequences.EMPTY; // Should not reach here
+    }
+
+    private void drawBoard(GameData gameData, String perspective) {
+        System.out.println("\nCurrent Chessboard:");
+        ChessBoard chessBoard = gameData.game().getBoard(); // Access the board from GameData
+        String lightSquareBg = EscapeSequences.SET_BG_COLOR_LIGHT_GREY;
+        String darkSquareBg = EscapeSequences.SET_BG_COLOR_DARK_GREY;
+        String whitePieceColor = EscapeSequences.SET_TEXT_COLOR_RED;
+        String blackPieceColor = EscapeSequences.SET_TEXT_COLOR_BLUE;
+        String reset = EscapeSequences.RESET_BG_COLOR + EscapeSequences.RESET_TEXT_COLOR;
+        String emptySquare = EscapeSequences.EMPTY;
+        String rowLabelColor = EscapeSequences.SET_TEXT_COLOR_LIGHT_GREY;
+        String colLabelColor = EscapeSequences.SET_TEXT_COLOR_LIGHT_GREY;
+
+        if (perspective.equalsIgnoreCase("white") || perspective.equalsIgnoreCase("observe")) {
+            // White's perspective
+            System.out.println(colLabelColor + "  a  b  c  d  e  f  g  h" + reset);
+            for (int row = 8; row >= 1; row--) {
+                System.out.print(rowLabelColor + row + " " + reset);
+                for (char colChar = 'a'; colChar <= 'h'; colChar++) {
+                    int col = colChar - 'a' + 1;
+                    ChessPosition pos = new ChessPosition(row, col);
+                    ChessPiece piece = chessBoard.getPiece(pos);
+                    String pieceChar = getPieceChar(piece);
+                    //boolean isLight = (row + (col - 'a' + 1)) % 2 != 0;
+                    boolean isLight = (row + col) % 2 != 0;
+                    String bgColor = isLight ? lightSquareBg : darkSquareBg;
+                    String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE)
+                            ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_BLACK);
+                    System.out.print(bgColor + textColor + pieceChar + reset);
+                }
+                System.out.println();
+            }
+            System.out.println(colLabelColor + "  a  b  c  d  e  f  g  h" + reset);
+
+        } else if (perspective.equalsIgnoreCase("black")) {
+            // Black's perspective
+            System.out.println(colLabelColor + "  h  g  f  e  d  c  b  a" + reset);
+            for (int row = 1; row <= 8; row++) {
+                System.out.print(rowLabelColor + row + " " + reset);
+                for (char colChar = 'h'; colChar >= 'a'; colChar--) {
+                    int col = colChar - 'a' + 1;
+                    ChessPosition pos = new ChessPosition(row, col);
+                    ChessPiece piece = chessBoard.getPiece(pos);
+                    String pieceChar = getPieceChar(piece);
+                    boolean isLight = (row + col) % 2 != 0;
+                    String bgColor = isLight ? lightSquareBg : darkSquareBg;
+                    String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE)
+                            ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_WHITE);
+                    System.out.print(bgColor + textColor + pieceChar + reset);
+                }
+                System.out.println();
+            }
+            System.out.println(colLabelColor + "  h  g  f  e  d  c  b  a" + reset);
+        } else {
+            System.out.println("Invalid perspective: " + perspective);
+        }
+        System.out.println();
+    }
+
+    private void redrawBoard(int gameID, Session currentSession) {
+        System.out.println("Requesting board redraw from server.");
+        sendRedrawBoardRequest(gameID, currentSession);
     }
 }

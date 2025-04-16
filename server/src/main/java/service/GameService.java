@@ -95,10 +95,10 @@ public class GameService {
         if (gameData == null) {
             throw new DataAccessException("Error: bad request - Game not found");
         }
+        if (gameData.whiteUsername() == null || gameData.blackUsername() == null) {
+            throw new DataAccessException("Error: bad request - Game is over");
+        }
 
-
-        // 3. Validate the move
-        // Assuming you have chess logic classes to validate the move
         ChessGame game = gameData.game();
         if (!isValidMove(game, move, username, gameID)) {
             throw new DataAccessException("Error: bad request - Invalid move");

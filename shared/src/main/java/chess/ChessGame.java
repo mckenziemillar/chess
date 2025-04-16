@@ -12,10 +12,12 @@ import java.util.ArrayList;
 public class ChessGame {
     private TeamColor teamTurn;
     private ChessBoard board;
+    private boolean gameOver;
     public ChessGame() {
         teamTurn = TeamColor.WHITE;
         board = new ChessBoard();
         board.resetBoard();
+        gameOver = false;
     }
 
     /**
@@ -153,7 +155,11 @@ public class ChessGame {
      * @return True if the specified team is in checkmate
      */
     public boolean isInCheckmate(TeamColor teamColor) {
-        return isTeamWithoutMoves(teamColor);
+        boolean isInCheckmate = isTeamWithoutMoves(teamColor);
+        if (isInCheckmate){
+            gameOver = true;
+        }
+        return isInCheckmate;
     }
 
     /**
@@ -164,7 +170,11 @@ public class ChessGame {
      * @return True if the specified team is in stalemate, otherwise false
      */
     public boolean isInStalemate(TeamColor teamColor) {
-        return !isInCheck(teamColor) && isTeamWithoutMoves(teamColor);
+        boolean isInStalemate = !isInCheck(teamColor) && isTeamWithoutMoves(teamColor);
+        if (isInStalemate){
+            gameOver = true;
+        }
+        return isInStalemate;
     }
 
     private boolean isTeamWithoutMoves(TeamColor teamColor) {
@@ -190,6 +200,14 @@ public class ChessGame {
             }
         }
         return false;
+    }
+
+    public boolean getGameOver(){
+        return gameOver;
+    }
+
+    public void setGameOver(boolean gameOver){
+        this.gameOver = gameOver;
     }
 
     /**

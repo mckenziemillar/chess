@@ -1,5 +1,6 @@
 package server.handler;
 
+import chess.ChessGame;
 import chess.ChessMove;
 import com.google.gson.JsonObject;
 import dataaccess.DataAccessException;
@@ -34,7 +35,7 @@ public class WebSocketHandler {
     // WebSocket Session Management
     private final Map<Integer, Set<Session>> gameSessions = new HashMap<>();
     private final Map<Session, AuthData> sessionAuthMap = new HashMap<>();
-    private final Map<Integer, Boolean> gameIsOver = new ConcurrentHashMap<>();
+    //private final Map<Integer, Boolean> gameIsOver = new ConcurrentHashMap<>();
 
     public WebSocketHandler(GameService gameService, AuthService authService) {
         this.gameService = gameService;
@@ -80,6 +81,9 @@ public class WebSocketHandler {
                 case RESIGN:
                     handleResignCommand(session, command);
                     break;
+                case REDRAW_BOARD:
+                    handleRedrawBoardCommand(session, command);
+                    break;
                 default:
                     sendError(session, "Error: Unknown command type: " + command.getCommandType());
                     break;
@@ -109,6 +113,7 @@ public class WebSocketHandler {
                 sendError(session, "Error: bad request - Game not found");
                 return;
             }
+
 
             // 3. Send LOAD_GAME message to the connecting client
             ServerMessage loadGameMessage = new ServerMessage(ServerMessage.ServerMessageType.LOAD_GAME);
@@ -140,15 +145,11 @@ public class WebSocketHandler {
 
     private void handleMakeMoveCommand(Session session, UserGameCommand command, String message) {
         System.out.println("MAKE_MOVE command received: " + message);
+        System.out.println("handleMakeMoveCommand for gameID: " + command.getGameID());
 
         try {
-            // 1. Parse the JSON string to a JsonObject
             JsonObject jsonCommand = gson.fromJson(message, JsonObject.class);
-
-            // 2. Extract the "move" JsonObject
             JsonObject moveObject = jsonCommand.getAsJsonObject("move");
-
-            // 3. Deserialize the move JsonObject to a ChessMove
             ChessMove move = gson.fromJson(moveObject, ChessMove.class);
 
             // 4. Handle potential errors during deserialization
@@ -156,7 +157,14 @@ public class WebSocketHandler {
                 sendError(session, "Error: bad request - Invalid move format");
                 return;
             }
-            if (gameIsOver.getOrDefault(command.getGameID(), false)) {
+            int gameID = command.getGameID();
+            System.out.println("idk something");
+            GameData gameData = gameService.dataAccess.getGame(command.getGameID());
+            ChessGame game = gameData.game();
+            boolean isGameOver = game.getGameOver();
+
+
+           if (isGameOver) {
                 sendError(session, "Error: bad request - Game is over");
                 return;
             }
@@ -201,6 +209,7 @@ public class WebSocketHandler {
     private void handleResignCommand(Session session, UserGameCommand command) {
         // Handle RESIGN command
         System.out.println("RESIGN command received");
+        System.out.println("handleResignCommand for gameID: " + command.getGameID());
 
         try {
             AuthData authData = getAuthDataForSession(session);
@@ -212,23 +221,52 @@ public class WebSocketHandler {
                 sendError(session, "Error: bad request - Observers cannot resign.");
                 return;
             }
+            ChessGame game = gameData.game();
+            boolean isGameOver = game.getGameOver();
+
+
+            if (isGameOver) {
+                sendError(session, "Error: bad request - Game is already over");
+                return;
+            }
+            gameData.game().setGameOver(true);
+            gameService.dataAccess.updateGame(gameData);
+            gameService.resignGame(command.getAuthToken(), gameID);
 
             // 1. Mark the game as over due to resignation
+
             gameService.resignGame(command.getAuthToken(), command.getGameID()); // Assuming you have a resignGame method
-            gameIsOver.put(command.getGameID(), true);
-            // 2. Send a NOTIFICATION message to all clients about the resignation
-            sendNotificationToAll(command.getGameID(), command.getAuthToken(), null, "resigned from the game");
+
+            //gameService.dataAccess.updateGame(updatedGameData);
 
             ServerMessage resignAcknowledgement = new ServerMessage(ServerMessage.ServerMessageType.NOTIFICATION);
-            //AuthData authData = getAuthDataForSession(session);
-            //String username = (authData != null) ? authData.username() : "You";
             resignAcknowledgement.setMessage("You have resigned from the game.");
             sendMessage(session, resignAcknowledgement);
+            // 2. Send a NOTIFICATION message to all clients about the resignation
+            sendNotificationToAll(command.getGameID(), command.getAuthToken(), null, "resigned from the game");
 
         } catch (DataAccessException e) {
             sendError(session, e.getMessage());
         }
     }
+
+    private void handleRedrawBoardCommand(Session session, UserGameCommand command) {
+        try {
+            GameData gameData = gameService.dataAccess.getGame(command.getGameID());
+            if (gameData != null) {
+                ServerMessage loadGameMessage = new ServerMessage(ServerMessage.ServerMessageType.LOAD_GAME);
+                loadGameMessage.setGame(gameData);
+                sendMessage(session, loadGameMessage);
+            } else {
+                sendError(session, "Error: Game not found.");
+            }
+        } catch (DataAccessException e) {
+            sendError(session, e.getMessage());
+        }
+    }
+
+
+
 
     private void sendLoadGameToAll(int gameID, GameData gameData) {
         // 1. Get all sessions for the game
