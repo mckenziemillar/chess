@@ -123,13 +123,20 @@ public class WebSocketHandler {
             addSession(gameID, session);
             sessionAuthMap.put(session, authData);
 
+            String roleInfo = "an observer"; // Default to observer
+            if (gameData.whiteUsername() != null && gameData.whiteUsername().equals(username)) {
+                roleInfo = "white";
+            } else if (gameData.blackUsername() != null && gameData.blackUsername().equals(username)) {
+                roleInfo = "black";
+            }
+
             //sendNotificationToAll(gameID, authToken, null, username + " connected to the game");
             Set<Session> sessions = gameSessions.get(gameID);
             if (sessions != null) {
                 for (Session otherSession : sessions) {
                     if (otherSession != session) { // Don't send the notification back to the connecting client
                         ServerMessage notificationMessage = new ServerMessage(ServerMessage.ServerMessageType.NOTIFICATION);
-                        notificationMessage.setMessage(username + " connected to the game");
+                        notificationMessage.setMessage(username + " connected to the game as " + roleInfo);
                         sendMessage(otherSession, notificationMessage);
                     }
                 }
@@ -142,7 +149,6 @@ public class WebSocketHandler {
     }
 
     private void handleMakeMoveCommand(Session session, UserGameCommand command) { // Removed 'String message' param
-        System.out.println("MAKE_MOVE command received for gameID: " + command.getGameID());
 
         try {
             // 1. Get Move and Auth Token from Command
@@ -186,7 +192,7 @@ public class WebSocketHandler {
             }
             // Check if game was *already* over before this move attempt
             if (initialGameData.game().getGameOver()) {
-                sendError(session, "Error: bad request - Game " + gameID + " is already over.");
+                sendError(session, "Error: bad request - Game is already over.");
                 return;
             }
             // Check if the sender is actually a player in this game
@@ -215,7 +221,6 @@ public class WebSocketHandler {
                 ChessGame updatedGame = updatedGameData.game();
 
                 // ***** 5a. Send LOAD_GAME to everyone ONCE *****
-                System.out.println("DEBUG: Sending LOAD_GAME to all for game " + gameID + " after move.");
                 sendLoadGameToAll(gameID, updatedGameData);
 
                 // 5b. Check game end conditions / check state
@@ -275,7 +280,6 @@ public class WebSocketHandler {
                 sendNotificationToAllButOne(session, gameID, detailedMoveNotification);
                 if (specialNotification != null) {
                     // Send checkmate/stalemate/check notification to ALL
-                    System.out.println("DEBUG: Sending special notification to all for game " + gameID + ": " + specialNotification);
                     sendNotificationToAll(gameID, specialNotification);
                 }
                 // If game is over but not by checkmate/stalemate (e.g. resignation handled elsewhere), no message needed here.
@@ -313,7 +317,6 @@ public class WebSocketHandler {
         // Persist the potentially updated game state
         try {
             gameService.dataAccess.updateGame(gameData);
-            System.out.println("DEBUG: Ensured game over state is persisted for game " + gameID);
         } catch (DataAccessException dae) {
             System.err.println("Failed to persist game over state for game " + gameID + ": " + dae.getMessage());
             // Consider if more robust error handling is needed here
@@ -342,7 +345,6 @@ public class WebSocketHandler {
     }
 
     private void handleLeaveCommand(Session session, UserGameCommand command) {
-        System.out.println("LEAVE command received");
 
         try {
             // 1. Remove the user from the game
@@ -359,7 +361,6 @@ public class WebSocketHandler {
 
     private void handleResignCommand(Session session, UserGameCommand command) {
         // Handle RESIGN command
-        System.out.println("RESIGN command received");
         System.out.println("handleResignCommand for gameID: " + command.getGameID());
 
         try {
@@ -442,13 +443,12 @@ public class WebSocketHandler {
             ServerMessage notificationMessage = new ServerMessage(ServerMessage.ServerMessageType.NOTIFICATION);
             notificationMessage.setMessage(notificationText);
             List<Session> sessionList = new ArrayList<>(sessions);
-            System.out.println("DEBUG: Broadcasting notification to game " + gameID + ": " + notificationText);
             for (Session sess : sessionList) {
                 if (sess.isOpen()){ sendMessage(sess, notificationMessage); }
                 else { removeSession(sess); }
             }
         } else {
-            System.out.println("DEBUG: No sessions found for game " + gameID + " to send notification.");
+            System.out.println("No sessions found for game " + gameID + " to send notification.");
         }
     }
 
@@ -458,13 +458,12 @@ public class WebSocketHandler {
             ServerMessage notificationMessage = new ServerMessage(ServerMessage.ServerMessageType.NOTIFICATION);
             notificationMessage.setMessage(notificationText);
             List<Session> sessionList = new ArrayList<>(sessions);
-            System.out.println("DEBUG: Sending notification to others in game " + gameID + ": " + notificationText);
             for (Session sess : sessionList) {
                 if (sess.isOpen() && !sess.equals(senderSession)) { sendMessage(sess, notificationMessage); }
                 else if (!sess.isOpen()){ removeSession(sess); }
             }
         } else {
-            System.out.println("DEBUG: No sessions found for game " + gameID + " to send notification.");
+            System.out.println("No sessions found for game " + gameID + " to send notification.");
         }
     }
 

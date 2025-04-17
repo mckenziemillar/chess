@@ -436,13 +436,47 @@ public class ChessClient extends Endpoint{
         String[] parts = moveInput.split("\\s+");
         if (parts.length == 2) {
             try {
-                ChessMove move = parseMove(parts[0], parts[1]);
+                ChessPosition startPos = parsePosition(parts[0]);
+                ChessPosition endPos = parsePosition(parts[1]);
+                ChessMove move = new ChessMove(startPos, endPos, null);
+                //ChessMove move = parseMove(parts[0], parts[1]);
+                ChessBoard board = currentChessGame.getBoard();
+                ChessPiece piece = board.getPiece(startPos);
+                if (piece != null && piece.getPieceType() == ChessPiece.PieceType.PAWN &&
+                        ((piece.getTeamColor() == ChessGame.TeamColor.WHITE && endPos.getRow() == 8) ||
+                                (piece.getTeamColor() == ChessGame.TeamColor.BLACK && endPos.getRow() == 1))) {
+                    System.out.print("Promote to (Q/R/B/N): ");
+                    String promotionChoice = scanner.nextLine().trim().toUpperCase();
+                    ChessPiece.PieceType promotionPieceType = getPromotionPieceType(promotionChoice);
+                    if (promotionPieceType != null) {
+                        move = new ChessMove(startPos, endPos, promotionPieceType); // Update move with promotion
+                    } else {
+                        System.out.println("Invalid promotion choice. Promoting to Queen by default.");
+                        move = new ChessMove(startPos, endPos, ChessPiece.PieceType.QUEEN); // Default to Queen
+                    }
+                }
+
                 sendMakeMoveCommand(gameID, currentSession, move);
             } catch (IllegalArgumentException e) {
                 System.out.println("Invalid move format: " + e.getMessage());
             }
         } else {
             System.out.println("Invalid move format. Please use: <start> <end> (e.g., a2 a4)");
+        }
+    }
+
+    private ChessPiece.PieceType getPromotionPieceType(String promotionChoice) {
+        switch (promotionChoice) {
+            case "Q":
+                return ChessPiece.PieceType.QUEEN;
+            case "R":
+                return ChessPiece.PieceType.ROOK;
+            case "B":
+                return ChessPiece.PieceType.BISHOP;
+            case "N":
+                return ChessPiece.PieceType.KNIGHT;
+            default:
+                return null; // Invalid choice
         }
     }
 
@@ -510,7 +544,7 @@ public class ChessClient extends Endpoint{
                 ChessPiece piece = board.getPiece(position);
                 if (piece != null) {
                     Collection<ChessMove> legalMoves = currentChessGame.validMoves(position);
-                    highlightMovesOnBoard(position, legalMoves);
+                    highlightMovesOnBoard(position, legalMoves, playerColor);
                 } else {
                     System.out.println("Error: No piece at " + square);
                 }
@@ -522,8 +556,8 @@ public class ChessClient extends Endpoint{
         }
     }
 
-    private void highlightMovesOnBoard(ChessPosition selectedPosition, Collection<ChessMove> legalMoves) {
-        drawBoard(legalMoves, selectedPosition);
+    private void highlightMovesOnBoard(ChessPosition selectedPosition, Collection<ChessMove> legalMoves, String perspective) {
+        drawBoard(legalMoves, selectedPosition, perspective);
     }
 
 // Implement calculateLegalMoves to determine the valid moves
@@ -539,7 +573,6 @@ public class ChessClient extends Endpoint{
             this.session.addMessageHandler(new MessageHandler.Whole<String>(){
                 @Override
                 public void onMessage(String message){
-                    System.out.println("onMessage recieved");
                     handleWebSocketMessage(message);
                 }
             });
@@ -580,7 +613,7 @@ public class ChessClient extends Endpoint{
             ServerMessage serverMessage = gson.fromJson(message, ServerMessage.class);
             switch (serverMessage.getServerMessageType()) {
                 case LOAD_GAME:
-                    System.out.println("Received LOAD_GAME message: " + message);
+                    //System.out.println("Received LOAD_GAME message: " + message);
 
                     Object gamePayload = serverMessage.getGame(); // Get the payload object
                     if (gamePayload != null) {
@@ -603,10 +636,10 @@ public class ChessClient extends Endpoint{
                         } else {
                             System.err.println("Error: LOAD_GAME data, game object, or board is null after parsing.");
                             if(gameData != null && gameData.game() == null) {
-                                System.err.println("DEBUG: gameData.game() is null.");
+                                System.err.println("gameData.game() is null.");
                             }
                             if(gameData != null && gameData.game() != null && gameData.game().getBoard() == null) {
-                                System.err.println("DEBUG: gameData.game().getBoard() is null.");
+                                System.err.println("gameData.game().getBoard() is null.");
                             }
                         }
                     } else {
@@ -614,8 +647,10 @@ public class ChessClient extends Endpoint{
                     }
                     displayGameplayHelp();
                     System.out.print(username + " >> ");
+                    System.out.print(" ");
                     break;
                 case NOTIFICATION:
+
                     JsonObject jsonObject = gson.fromJson(message, JsonObject.class);
                     if (jsonObject.has("message")) {
                         String notification = jsonObject.get("message").getAsString();
@@ -864,7 +899,7 @@ public class ChessClient extends Endpoint{
         System.out.println();
     }
 
-    private void drawBoard(Collection<ChessMove> legalMoves, ChessPosition selectedPosition){
+    private void drawBoard(Collection<ChessMove> legalMoves, ChessPosition selectedPosition, String perspective){
         if (!displayingGame) {
             return;
         }
@@ -879,34 +914,70 @@ public class ChessClient extends Endpoint{
         String rowLabelColor = EscapeSequences.SET_TEXT_COLOR_LIGHT_GREY;
         String colLabelColor = EscapeSequences.SET_TEXT_COLOR_LIGHT_GREY;
         String highlightColor = EscapeSequences.SET_BG_COLOR_GREEN;
-
-        System.out.println(colLabelColor + "  a  b  c  d  e  f  g  h" + reset);
-        for (int row = 8; row >= 1; row--) {
-            System.out.print(rowLabelColor + row + " " + reset);
-            for (char colChar = 'a'; colChar <= 'h'; colChar++) {
-                int col = colChar - 'a' + 1;
-                ChessPosition pos = new ChessPosition(row, col);
-                ChessPiece piece = chessBoard.getPiece(pos);
-                String pieceChar = getPieceChar(piece);
-                boolean isLight = (row + col) % 2 != 0;
-                String bgColor = isLight ? lightSquareBg : darkSquareBg;
-                String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE)
-                        ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_BLACK);
-                if (selectedPosition != null && selectedPosition.equals(pos)){
-                    bgColor = highlightColor;
-                } else{
-                    for (ChessMove move : legalMoves){
-                        if (move.getEndPosition().equals(pos)){
-                            bgColor = highlightColor;
-                            break;
+        if(perspective == null){ perspective = "observe"; }
+        if (perspective.equalsIgnoreCase("white") || perspective.equalsIgnoreCase("observe")) {
+            System.out.println(colLabelColor + "  a  b  c  d  e  f  g  h" + reset);
+            for (int row = 8; row >= 1; row--) {
+                System.out.print(rowLabelColor + row + " " + reset);
+                for (char colChar = 'a'; colChar <= 'h'; colChar++) {
+                    int col = colChar - 'a' + 1;
+                    ChessPosition pos = new ChessPosition(row, col);
+                    ChessPiece piece = chessBoard.getPiece(pos);
+                    String pieceChar = getPieceChar(piece);
+                    boolean isLight = (row + col) % 2 != 0;
+                    String bgColor = isLight ? lightSquareBg : darkSquareBg;
+                    String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE)
+                            ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_BLACK);
+                    if (selectedPosition != null && selectedPosition.equals(pos)){
+                        bgColor = highlightColor;
+                    } else{
+                        for (ChessMove move : legalMoves){
+                            if (move.getEndPosition().equals(pos)){
+                                bgColor = highlightColor;
+                                break;
+                            }
                         }
                     }
+                    System.out.print(bgColor + textColor + pieceChar + reset);
                 }
-                System.out.print(bgColor + textColor + pieceChar + reset);
+                System.out.println();
             }
+            System.out.println(colLabelColor + "  a  b  c  d  e  f  g  h" + reset);
             System.out.println();
+
+        } else if (perspective.equalsIgnoreCase("black")) {
+            System.out.println(colLabelColor + "  h  g  f  e  d  c  b  a" + reset);
+            for (int row = 1; row <= 8; row++) {
+                System.out.print(rowLabelColor + row + " " + reset);
+                for (char colChar = 'h'; colChar >= 'a'; colChar--) {
+                    int col = colChar - 'a' + 1;
+                    ChessPosition pos = new ChessPosition(row, col);
+                    ChessPiece piece = chessBoard.getPiece(pos);
+                    String pieceChar = getPieceChar(piece);
+                    boolean isLight = (row + col) % 2 != 0;
+                    String bgColor = isLight ? lightSquareBg : darkSquareBg;
+                    String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE)
+                            ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_WHITE);
+                    if (selectedPosition != null && selectedPosition.equals(pos)) {
+                        bgColor = highlightColor;
+                    } else {
+                        for (ChessMove move : legalMoves) {
+                            if (move.getEndPosition().equals(pos)) {
+                                bgColor = highlightColor;
+                                break;
+                            }
+                        }
+                    }
+                    System.out.print(bgColor + textColor + pieceChar + reset);
+                }
+                System.out.println();
+            }
+            System.out.println(colLabelColor + "  h  g  f  e  d  c  b  a" + reset);
+            System.out.println();
+        } else {
+        System.out.println("Invalid perspective: " + perspective);
         }
-        System.out.println(colLabelColor + "  a  b  c  d  e  f  g  h" + reset);
-        System.out.println();
+
     }
+
 }
