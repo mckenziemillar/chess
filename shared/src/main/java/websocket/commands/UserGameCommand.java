@@ -52,7 +52,9 @@ public class UserGameCommand {
         return gameID;
     }
 
-
+    public ChessMove getMove() {
+        return move;
+    }
 
     @Override
     public boolean equals(Object o) {

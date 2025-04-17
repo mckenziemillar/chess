@@ -2,6 +2,8 @@ package server.handler;
 
 import chess.ChessGame;
 import chess.ChessMove;
+import chess.ChessPiece;
+import chess.ChessPosition;
 import com.google.gson.JsonObject;
 import dataaccess.DataAccessException;
 import org.eclipse.jetty.websocket.api.Session;
@@ -18,11 +20,7 @@ import websocket.messages.ServerMessage;
 import model.AuthData;
 import model.GameData;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @WebSocket
@@ -73,7 +71,7 @@ public class WebSocketHandler {
                     handleConnectCommand(session, command);
                     break;
                 case MAKE_MOVE:
-                    handleMakeMoveCommand(session, command, message); // Pass the message for JSON parsing
+                    handleMakeMoveCommand(session, command); // Pass the message for JSON parsing
                     break;
                 case LEAVE:
                     handleLeaveCommand(session, command);
@@ -143,51 +141,185 @@ public class WebSocketHandler {
         }
     }
 
-    private void handleMakeMoveCommand(Session session, UserGameCommand command, String message) {
-        System.out.println("MAKE_MOVE command received: " + message);
-        System.out.println("handleMakeMoveCommand for gameID: " + command.getGameID());
+    private void handleMakeMoveCommand(Session session, UserGameCommand command) { // Removed 'String message' param
+        System.out.println("MAKE_MOVE command received for gameID: " + command.getGameID());
 
         try {
-            JsonObject jsonCommand = gson.fromJson(message, JsonObject.class);
-            JsonObject moveObject = jsonCommand.getAsJsonObject("move");
-            ChessMove move = gson.fromJson(moveObject, ChessMove.class);
-
-            // 4. Handle potential errors during deserialization
-            if (move == null) {
-                sendError(session, "Error: bad request - Invalid move format");
-                return;
-            }
+            // 1. Get Move and Auth Token from Command
+            ChessMove move = command.getMove(); // Use the getter
+            String authToken = command.getAuthToken();
             int gameID = command.getGameID();
-            System.out.println("idk something");
-            GameData gameData = gameService.dataAccess.getGame(command.getGameID());
-            ChessGame game = gameData.game();
-            boolean isGameOver = game.getGameOver();
 
-
-           if (isGameOver) {
-                sendError(session, "Error: bad request - Game is over");
+            // Validate command components
+            if (move == null) {
+                sendError(session, "Error: bad request - Move data missing in command object.");
+                return;
+            }
+            if (authToken == null) {
+                sendError(session, "Error: bad request - Auth token missing in command object.");
+                return;
+            }
+            if (gameID <= 0) { // Basic check for gameID validity
+                sendError(session, "Error: bad request - Invalid game ID in command object.");
                 return;
             }
 
-            // 5. Validate the move using gameService (which also updates the game state)
+
+            // 2. Authenticate User
+            AuthData authData = authService.getAuth(authToken);
+            if (authData == null) {
+                sendError(session, "Error: Unauthorized - Invalid auth token.");
+                return;
+            }
+            String moverUsername = authData.username();
+
+
+            // 3. Pre-Move Checks (Game Exists? Already Over? Is Player?)
+            GameData initialGameData = gameService.dataAccess.getGame(gameID);
+            if (initialGameData == null) {
+                sendError(session, "Error: bad request - Game not found (ID: " + gameID + ").");
+                return;
+            }
+            if (initialGameData.game() == null) {
+                sendError(session, "Error: internal server error - Game state object is missing for game " + gameID + ".");
+                return;
+            }
+            // Check if game was *already* over before this move attempt
+            if (initialGameData.game().getGameOver()) {
+                sendError(session, "Error: bad request - Game " + gameID + " is already over.");
+                return;
+            }
+            // Check if the sender is actually a player in this game
+            if (!moverUsername.equals(initialGameData.whiteUsername()) && !moverUsername.equals(initialGameData.blackUsername())) {
+                sendError(session, "Error: Forbidden - Observers (" + moverUsername + ") cannot make moves in game " + gameID + ".");
+                return;
+            }
+
+
+            // 4. Attempt to make the move via the service
             GameData updatedGameData = null;
             try {
-                updatedGameData = gameService.makeMove(command.getAuthToken(), command.getGameID(), move);
+                // GameService.makeMove should validate turn, move legality, execute, persist, and set game over if needed
+                updatedGameData = gameService.makeMove(authToken, gameID, move);
             } catch (DataAccessException e) {
-                sendError(session, "Error: bad request - " + e.getMessage()); // Send specific error message
-                return; // IMPORTANT: Exit the method after sending the error
+                // Catch specific exceptions related to invalid move, wrong turn, etc.
+                System.err.println("SERVER INFO: Invalid move attempt in game " + gameID + ": " + e.getMessage());
+                sendError(session, "Error making move: " + e.getMessage()); // Send the specific reason back
+                return; // Stop processing
             }
 
-            if (updatedGameData != null) {
-                // 3. Send a LOAD_GAME message to all clients
-                sendLoadGameToAll(command.getGameID(), updatedGameData);
 
-                // 4. Send a NOTIFICATION message to other clients about the move
-                sendNotificationToAll(command.getGameID(), command.getAuthToken(), move, describeMove(move));
+            // 5. Post-Move State Checks and Notifications
+            if (updatedGameData != null && updatedGameData.game() != null) {
+                ChessGame updatedGame = updatedGameData.game();
+
+                // ***** 5a. Send LOAD_GAME to everyone ONCE *****
+                System.out.println("DEBUG: Sending LOAD_GAME to all for game " + gameID + " after move.");
+                sendLoadGameToAll(gameID, updatedGameData);
+
+                // 5b. Check game end conditions / check state
+                ChessGame.TeamColor potentiallyAffectedTeam = updatedGame.getTeamTurn(); // Whose turn is next
+                String affectedPlayerUsername = (potentiallyAffectedTeam == ChessGame.TeamColor.WHITE) ?
+                        updatedGameData.whiteUsername() : updatedGameData.blackUsername();
+
+                boolean isNowGameOver = updatedGame.getGameOver(); // Check if makeMove marked it over
+                String specialNotification = null;
+
+                // Checkmate
+                if (updatedGame.isInCheckmate(potentiallyAffectedTeam)) {
+                    isNowGameOver = true;
+                    String winnerUsername = moverUsername;
+                    specialNotification = "Checkmate! " + affectedPlayerUsername + " is defeated. " + winnerUsername + " wins!";
+                }
+                // Stalemate
+                else if (updatedGame.isInStalemate(potentiallyAffectedTeam)) {
+                    isNowGameOver = true;
+                    specialNotification = "Stalemate! The game is a draw.";
+                }
+                // Check (only if game didn't end)
+                else if (updatedGame.isInCheck(potentiallyAffectedTeam)) {
+                    specialNotification = affectedPlayerUsername + " is in check!";
+                }
+
+                // Ensure persisted state reflects game over if checkmate/stalemate occurred
+                // (Ideally, gameService.makeMove handles this persistence reliably)
+                if (isNowGameOver && !initialGameData.game().getGameOver()) { // Check if it *just* ended
+                    if (!updatedGame.getGameOver()) { // Double check if service failed to set flag
+                        System.err.println("SERVER WARNING: Checkmate/Stalemate detected, but game object not marked as over by service for game " + gameID);
+                        updatedGame.setGameOver(true); // Mark it here
+                        // Re-persist the final game over state
+                        try {
+                            gameService.dataAccess.updateGame(updatedGameData);
+                            System.out.println("DEBUG: Re-persisted game over state for game " + gameID);
+                        } catch (DataAccessException dae) {
+                            System.err.println("Failed to persist game over state after checkmate/stalemate for game " + gameID);
+                        }
+                    }
+                }
+
+                // ***** 5c. Send Notifications (only ONE notification path executes) *****
+
+                ChessPiece pieceMoved = null;
+                String pieceTypeName = "piece"; // Default value
+                if (initialGameData.game() != null && move.getStartPosition() != null) {
+                    // Get the game state *before* the move was made
+                    ChessGame gameBeforeMove = initialGameData.game();
+                    // Get the piece at the starting square
+                    pieceMoved = gameBeforeMove.getPiece(move.getStartPosition());
+                    if (pieceMoved != null) {
+                        // Get the type name (e.g., "PAWN", "ROOK")
+                        pieceTypeName = pieceMoved.getPieceType().toString();
+                    }
+                }
+                String detailedMoveNotification = String.format("%s moved a %s from %s to %s%s",
+                        moverUsername, // The player who made the move
+                        pieceTypeName, // The type of the piece
+                        positionToString(move.getStartPosition()), // e.g., "h2"
+                        positionToString(move.getEndPosition()),   // e.g., "h3"
+                        (move.getPromotionPiece() != null ? " promoting to " + move.getPromotionPiece() : "") // Add promotion info if applicable
+                );
+
+                String moveDescription = describeMoveForNotification(move);
+                //sendNotificationToAllButOne(session, gameID, moverUsername + " made move " + moveDescription);
+                sendNotificationToAllButOne(session, gameID, detailedMoveNotification);
+                if (specialNotification != null) {
+                    // Send checkmate/stalemate/check notification to ALL
+                    System.out.println("DEBUG: Sending special notification to all for game " + gameID + ": " + specialNotification);
+                    sendNotificationToAll(gameID, specialNotification);
+                }
+                // If game is over but not by checkmate/stalemate (e.g. resignation handled elsewhere), no message needed here.
+
+            } else {
+                // This case suggests an issue within gameService.makeMove if it returned null without error
+                System.err.println("SERVER WARNING: gameService.makeMove returned null without throwing an exception for gameID: " + gameID);
+                sendError(session, "Error: Failed to process move state update.");
             }
-        } catch (Exception e) { // Catch generic Exception to handle JsonParseException and other potential issues
-            sendError(session, "Error processing WebSocket message: " + e.getMessage());
+
+        } catch (DataAccessException dae) {
+            // Catch errors from initial getGame or getAuth
+            System.err.println("SERVER ERROR: DataAccess error during make move setup for game " + command.getGameID() + ": " + dae.getMessage());
+            sendError(session, "Error accessing game or user data.");
+        } catch (Exception e) { // Catch any other unexpected errors
+            System.err.println("SERVER ERROR: Unexpected exception in handleMakeMoveCommand for game " + command.getGameID() + ": " + e.getMessage());
+            e.printStackTrace();
+            sendError(session, "Error processing move: An internal server error occurred.");
         }
+    }
+
+
+    private String describeMoveForNotification(ChessMove move) {
+        // Example: "from a2 to a4"
+        if (move == null) return "[invalid move]";
+        return "from " + positionToString(move.getStartPosition()) +
+                " to " + positionToString(move.getEndPosition()) +
+                (move.getPromotionPiece() != null ? " promoting to " + move.getPromotionPiece() : "");
+    }
+
+    private String positionToString(ChessPosition pos) {
+        if (pos == null) return "[unknown]";
+        char file = (char) ('a' + pos.getColumn() - 1);
+        char rank = (char) ('1' + pos.getRow() - 1);
+        return "" + file + rank;
     }
 
     private void handleLeaveCommand(Session session, UserGameCommand command) {
@@ -229,8 +361,10 @@ public class WebSocketHandler {
                 sendError(session, "Error: bad request - Game is already over");
                 return;
             }
-            gameData.game().setGameOver(true);
-            gameService.dataAccess.updateGame(gameData);
+            ChessGame gameNew= gameData.game();
+            gameNew.setGameOver(true);
+            GameData gameDataNew = new GameData(gameData.gameID(), gameData.whiteUsername(), gameData.blackUsername(), gameData.gameName(), gameNew);
+            gameService.dataAccess.updateGame(gameDataNew);
             gameService.resignGame(command.getAuthToken(), gameID);
 
             // 1. Mark the game as over due to resignation
@@ -281,6 +415,37 @@ public class WebSocketHandler {
             for (Session session : sessions) {
                 sendMessage(session, loadGameMessage);
             }
+        }
+    }
+    private void sendNotificationToAll(int gameID, String notificationText) {
+        Collection<Session> sessions = getSessionsForGame(gameID);
+        if (sessions != null) {
+            ServerMessage notificationMessage = new ServerMessage(ServerMessage.ServerMessageType.NOTIFICATION);
+            notificationMessage.setMessage(notificationText);
+            List<Session> sessionList = new ArrayList<>(sessions);
+            System.out.println("DEBUG: Broadcasting notification to game " + gameID + ": " + notificationText);
+            for (Session sess : sessionList) {
+                if (sess.isOpen()){ sendMessage(sess, notificationMessage); }
+                else { removeSession(sess); }
+            }
+        } else {
+            System.out.println("DEBUG: No sessions found for game " + gameID + " to send notification.");
+        }
+    }
+
+    private void sendNotificationToAllButOne(Session senderSession, int gameID, String notificationText) {
+        Collection<Session> sessions = getSessionsForGame(gameID);
+        if (sessions != null) {
+            ServerMessage notificationMessage = new ServerMessage(ServerMessage.ServerMessageType.NOTIFICATION);
+            notificationMessage.setMessage(notificationText);
+            List<Session> sessionList = new ArrayList<>(sessions);
+            System.out.println("DEBUG: Sending notification to others in game " + gameID + ": " + notificationText);
+            for (Session sess : sessionList) {
+                if (sess.isOpen() && !sess.equals(senderSession)) { sendMessage(sess, notificationMessage); }
+                else if (!sess.isOpen()){ removeSession(sess); }
+            }
+        } else {
+            System.out.println("DEBUG: No sessions found for game " + gameID + " to send notification.");
         }
     }
 

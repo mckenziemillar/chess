@@ -95,7 +95,7 @@ public class GameService {
         if (gameData == null) {
             throw new DataAccessException("Error: bad request - Game not found");
         }
-        if (gameData.whiteUsername() == null || gameData.blackUsername() == null) {
+        if (gameData.game().getGameOver()) {
             throw new DataAccessException("Error: bad request - Game is over");
         }
 
@@ -222,11 +222,16 @@ public class GameService {
         if (gameData == null) {
             throw new DataAccessException("Error: bad request - Game not found");
         }
-
-        // 3. Update the GameData to mark the game as over
-        // Assuming you have a method in GameData to set the game over
-        // and a corresponding field (e.g., gameOver)
-        // gameData.setGameOver(true);
+        String username = authData.username();
+        if (!username.equals(gameData.whiteUsername()) && !username.equals(gameData.blackUsername())) {
+            throw new DataAccessException("Error: bad request - Observers cannot resign.");
+        }
+        ChessGame game = gameData.game();
+        if (game == null) throw new DataAccessException("Error: Game object missing in GameData for ID: " + gameID);
+        /*if (game.getGameOver()) {
+            throw new DataAccessException("Error: bad request - Game is already over");
+        }*/
+        game.setGameOver(true);
         GameData updatedGameData = new GameData(gameData.gameID(), gameData.whiteUsername(),
                 gameData.blackUsername(), gameData.gameName(), gameData.game());
 

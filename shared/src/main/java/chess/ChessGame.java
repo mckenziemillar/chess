@@ -32,6 +32,10 @@ public class ChessGame {
      */
     public void setTeamTurn(TeamColor team) { teamTurn = team; }
 
+    public ChessPiece getPiece(ChessPosition startPosition) {
+        return board.getPiece(startPosition);
+    }
+
     /**
      * Enum identifying the 2 possible teams in a chess game
      */
