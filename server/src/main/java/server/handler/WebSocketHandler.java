@@ -245,18 +245,7 @@ public class WebSocketHandler {
                 // Ensure persisted state reflects game over if checkmate/stalemate occurred
                 // (Ideally, gameService.makeMove handles this persistence reliably)
                 if (isNowGameOver && !initialGameData.game().getGameOver()) { // Check if it *just* ended
-                    if (!updatedGame.getGameOver()) { // Double check if service failed to set flag
-                        System.err.println("SERVER WARNING: Checkmate/Stalemate detected, " +
-                                "but game object not marked as over by service for game " + gameID);
-                        updatedGame.setGameOver(true); // Mark it here
-                        // Re-persist the final game over state
-                        try {
-                            gameService.dataAccess.updateGame(updatedGameData);
-                            System.out.println("DEBUG: Re-persisted game over state for game " + gameID);
-                        } catch (DataAccessException dae) {
-                            System.err.println("Failed to persist game over state after checkmate/stalemate for game " + gameID);
-                        }
-                    }
+                    ensureAndPersistGameOverState(updatedGameData, gameID, true); // Call helper
                 }
 
                 // ***** 5c. Send Notifications (only ONE notification path executes) *****
@@ -308,6 +297,29 @@ public class WebSocketHandler {
         }
     }
 
+    private void ensureAndPersistGameOverState(GameData gameData, int gameID, boolean detectedGameOver) {
+        if (!detectedGameOver) {
+            return; // Nothing to do if we didn't detect game over here
+        }
+
+        ChessGame game = gameData.game();
+        // Check if the game object reflects the game over status
+        if (!game.getGameOver()) {
+            System.err.println("SERVER WARNING: Game over condition (Checkmate/Stalemate/Resign) detected, " +
+                    "but game object not marked as over by service for game " + gameID + ". Forcing update.");
+            game.setGameOver(true); // Mark it here
+        }
+
+        // Persist the potentially updated game state
+        try {
+            gameService.dataAccess.updateGame(gameData);
+            System.out.println("DEBUG: Ensured game over state is persisted for game " + gameID);
+        } catch (DataAccessException dae) {
+            System.err.println("Failed to persist game over state for game " + gameID + ": " + dae.getMessage());
+            // Consider if more robust error handling is needed here
+        }
+    }
+
 
     private String describeMoveForNotification(ChessMove move) {
         // Example: "from a2 to a4"
@@ -318,6 +330,7 @@ public class WebSocketHandler {
                 " to " + positionToString(move.getEndPosition()) +
                 (move.getPromotionPiece() != null ? " promoting to " + move.getPromotionPiece() : "");
     }
+
 
     private String positionToString(ChessPosition pos) {
         if (pos == null) {

@@ -602,10 +602,12 @@ public class ChessClient extends Endpoint{
                             drawBoard(gameData, perspective); // Draw the received board
                         } else {
                             System.err.println("Error: LOAD_GAME data, game object, or board is null after parsing.");
-                            if(gameData != null && gameData.game() == null) System.err.println("DEBUG: gameData.game() is null.");
-                            if(gameData != null && gameData.game() != null && gameData.game().getBoard() == null)
+                            if(gameData != null && gameData.game() == null) {
+                                System.err.println("DEBUG: gameData.game() is null.");
+                            }
+                            if(gameData != null && gameData.game() != null && gameData.game().getBoard() == null) {
                                 System.err.println("DEBUG: gameData.game().getBoard() is null.");
-
+                            }
                         }
                     } else {
                         System.err.println("Error: LOAD_GAME message payload field is null.");
@@ -655,6 +657,56 @@ public class ChessClient extends Endpoint{
         }
     }
 
+    private static class SquareAppearance {
+        final String bgColor;
+        final String textColor;
+        final String pieceChar;
+
+        SquareAppearance(String bgColor, String textColor, String pieceChar) {
+            this.bgColor = bgColor;
+            this.textColor = textColor;
+            this.pieceChar = pieceChar;
+        }
+    }
+
+    // Refactored helper method
+    private SquareAppearance getSquareAppearance(ChessBoard chessBoard, ChessPosition pos, String perspective,
+                                                 Collection<ChessMove> legalMoves, ChessPosition selectedPosition) {
+
+        ChessPiece piece = chessBoard.getPiece(pos);
+        String pieceChar = getPieceChar(piece);
+        boolean isLight = (pos.getRow() + pos.getColumn()) % 2 != 0;
+
+        // Define base colors (could be moved to constants)
+        String lightSquareBg = EscapeSequences.SET_BG_COLOR_LIGHT_GREY;
+        String darkSquareBg = EscapeSequences.SET_BG_COLOR_DARK_GREY;
+        String whitePieceColor = EscapeSequences.SET_TEXT_COLOR_RED;
+        String blackPieceColor = EscapeSequences.SET_TEXT_COLOR_BLUE;
+        String highlightColor = EscapeSequences.SET_BG_COLOR_GREEN;
+        String defaultTextColor = perspective.equalsIgnoreCase("black") ? EscapeSequences.SET_TEXT_COLOR_WHITE : EscapeSequences.SET_TEXT_COLOR_BLACK;
+
+        // Determine background color
+        String bgColor = isLight ? lightSquareBg : darkSquareBg;
+        if (selectedPosition != null && selectedPosition.equals(pos)) {
+            bgColor = highlightColor;
+        } else if (legalMoves != null) {
+            for (ChessMove move : legalMoves) {
+                if (move.getEndPosition().equals(pos)) {
+                    bgColor = highlightColor;
+                    break;
+                }
+            }
+        }
+
+        // Determine text color
+        String textColor = defaultTextColor; // Default for empty squares based on perspective
+        if (piece != null) {
+            textColor = (piece.getTeamColor() == ChessGame.TeamColor.WHITE) ? whitePieceColor : blackPieceColor;
+        }
+
+
+        return new SquareAppearance(bgColor, textColor, pieceChar);
+    }
 
     private void drawInitialBoard(String perspective) {
         System.out.println("\nInitial Chessboard:");
@@ -694,18 +746,13 @@ public class ChessClient extends Endpoint{
         } else if (perspective.equalsIgnoreCase("black")) {
             // Black's perspective
             System.out.println(colLabelColor + "  h  g  f  e  d  c  b  a" + reset);
-            for (int row = 1; row <= 8; row++) {
+            for (int row = 1; row <= 8; row++) { // Level 2
                 System.out.print(rowLabelColor + row + " " + reset);
-                for (char colChar = 'h'; colChar >= 'a'; colChar--) {
+                for (char colChar = 'h'; colChar >= 'a'; colChar--) { // Level 3
                     int col = colChar - 'a' + 1;
                     ChessPosition pos = new ChessPosition(row, col);
-                    ChessPiece piece = chessBoard.getPiece(pos);
-                    String pieceChar = getPieceChar(piece);
-                    boolean isLight = (row + col) % 2 != 0;
-                    String bgColor = isLight ? lightSquareBg : darkSquareBg;
-                    String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE)
-                            ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_WHITE);
-                    System.out.print(bgColor + textColor + pieceChar + reset);
+                    SquareAppearance appearance = getSquareAppearance(chessBoard, pos, perspective, null, null);
+                    System.out.print(appearance.bgColor + appearance.textColor + appearance.pieceChar + reset);
                 }
                 System.out.println();
             }
