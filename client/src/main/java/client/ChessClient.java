@@ -439,7 +439,6 @@ public class ChessClient extends Endpoint{
                 ChessPosition startPos = parsePosition(parts[0]);
                 ChessPosition endPos = parsePosition(parts[1]);
                 ChessMove move = new ChessMove(startPos, endPos, null);
-                //ChessMove move = parseMove(parts[0], parts[1]);
                 ChessBoard board = currentChessGame.getBoard();
                 ChessPiece piece = board.getPiece(startPos);
                 if (piece != null && piece.getPieceType() == ChessPiece.PieceType.PAWN &&
@@ -480,16 +479,6 @@ public class ChessClient extends Endpoint{
         }
     }
 
-    private ChessMove parseMove(String start, String end) {
-        try {
-            ChessPosition startPos = parsePosition(start);
-            ChessPosition endPos = parsePosition(end);
-            return new ChessMove(startPos, endPos, null); // Promotion is handled later
-        } catch (IllegalArgumentException e) {
-            System.out.println("Invalid move format: " + e.getMessage());
-            return null;
-        }
-    }
 
     private ChessPosition parsePosition(String position) {
         if (position.length() != 2) {
@@ -613,61 +602,13 @@ public class ChessClient extends Endpoint{
             ServerMessage serverMessage = gson.fromJson(message, ServerMessage.class);
             switch (serverMessage.getServerMessageType()) {
                 case LOAD_GAME:
-                    //System.out.println("Received LOAD_GAME message: " + message);
-
-                    Object gamePayload = serverMessage.getGame(); // Get the payload object
-                    if (gamePayload != null) {
-                        GameData gameData = null;
-                        try {
-                            // Convert the generic payload object back to JSON, then parse into GameData
-                            String gameJson = gson.toJson(gamePayload);
-                            gameData = gson.fromJson(gameJson, GameData.class);
-
-                        } catch (JsonParseException | ClassCastException e) {
-                            System.err.println("Error parsing GameData from LOAD_GAME payload: " + e.getMessage());
-                            e.printStackTrace(); // Print full stack trace for details
-                        }
-
-                        // Now check the deserialized gameData
-                        if (gameData != null && gameData.game() != null && gameData.game().getBoard() != null) {
-                            this.currentChessGame = gameData.game();
-                            String perspective = determinePerspective(gameData);
-                            drawBoard(gameData, perspective); // Draw the received board
-                        } else {
-                            System.err.println("Error: LOAD_GAME data, game object, or board is null after parsing.");
-                            if(gameData != null && gameData.game() == null) {
-                                System.err.println("gameData.game() is null.");
-                            }
-                            if(gameData != null && gameData.game() != null && gameData.game().getBoard() == null) {
-                                System.err.println("gameData.game().getBoard() is null.");
-                            }
-                        }
-                    } else {
-                        System.err.println("Error: LOAD_GAME message payload field is null.");
-                    }
-                    displayGameplayHelp();
-                    System.out.print(username + " >> ");
-                    System.out.print(" ");
+                    handleLoadGameMessage(serverMessage);
                     break;
                 case NOTIFICATION:
-
-                    JsonObject jsonObject = gson.fromJson(message, JsonObject.class);
-                    if (jsonObject.has("message")) {
-                        String notification = jsonObject.get("message").getAsString();
-                        System.out.println("Notification: " + notification);
-                    } else {
-                        System.out.println("Received generic NOTIFICATION: " + message);
-                    }
+                    handleNotificationMessage(message);
                     break;
                 case ERROR:
-                    // Assuming you'll create a specific ErrorMessage class with an 'errorMessage' field
-                    JsonObject errorObject = gson.fromJson(message, JsonObject.class);
-                    if (errorObject.has("errorMessage")) {
-                        String errorMessage = errorObject.get("errorMessage").getAsString();
-                        System.err.println("Server Error: " + errorMessage);
-                    } else {
-                        System.err.println("Received generic ERROR: " + message);
-                    }
+                    handleErrorMessage(message);
                     break;
                 default:
                     System.out.println("Received unknown WebSocket message type: " +
@@ -676,6 +617,62 @@ public class ChessClient extends Endpoint{
         } catch (JsonParseException e) {
             System.err.println("Error parsing WebSocket message: " + e.getMessage());
             System.err.println("Raw message: " + message);
+        }
+    }
+
+    private void handleLoadGameMessage(ServerMessage serverMessage){
+        Object gamePayload = serverMessage.getGame(); // Get the payload object
+        if (gamePayload != null) {
+            GameData gameData = null;
+            try {
+                // Convert the generic payload object back to JSON, then parse into GameData
+                String gameJson = gson.toJson(gamePayload);
+                gameData = gson.fromJson(gameJson, GameData.class);
+
+            } catch (JsonParseException | ClassCastException e) {
+                System.err.println("Error parsing GameData from LOAD_GAME payload: " + e.getMessage());
+                e.printStackTrace(); // Print full stack trace for details
+            }
+
+            // Now check the deserialized gameData
+            if (gameData != null && gameData.game() != null && gameData.game().getBoard() != null) {
+                this.currentChessGame = gameData.game();
+                String perspective = determinePerspective(gameData);
+                drawBoard(gameData, perspective); // Draw the received board
+            } else {
+                System.err.println("Error: LOAD_GAME data, game object, or board is null after parsing.");
+                if(gameData != null && gameData.game() == null) {
+                    System.err.println("gameData.game() is null.");
+                }
+                if(gameData != null && gameData.game() != null && gameData.game().getBoard() == null) {
+                    System.err.println("gameData.game().getBoard() is null.");
+                }
+            }
+        } else {
+            System.err.println("Error: LOAD_GAME message payload field is null.");
+        }
+        displayGameplayHelp();
+        System.out.print(username + " >> ");
+    }
+
+
+    private void handleErrorMessage(String message){
+        JsonObject errorObject = gson.fromJson(message, JsonObject.class);
+        if (errorObject.has("errorMessage")) {
+            String errorMessage = errorObject.get("errorMessage").getAsString();
+            System.err.println("Server Error: " + errorMessage);
+        } else {
+            System.err.println("Received generic ERROR: " + message);
+        }
+    }
+
+    private void handleNotificationMessage(String message){
+        JsonObject jsonObject = gson.fromJson(message, JsonObject.class);
+        if (jsonObject.has("message")) {
+            String notification = jsonObject.get("message").getAsString();
+            System.out.println("Notification: " + notification);
+        } else {
+            System.out.println("Received generic NOTIFICATION: " + message);
         }
     }
 
@@ -899,85 +896,78 @@ public class ChessClient extends Endpoint{
         System.out.println();
     }
 
-    private void drawBoard(Collection<ChessMove> legalMoves, ChessPosition selectedPosition, String perspective){
+    private void drawBoard(Collection<ChessMove> legalMoves, ChessPosition selectedPosition, String perspective) {
         if (!displayingGame) {
             return;
         }
         System.out.println("\nCurrent Chessboard:");
-        ChessBoard chessBoard = currentChessGame.getBoard(); // Access the board from GameData
-        String lightSquareBg = EscapeSequences.SET_BG_COLOR_LIGHT_GREY;
-        String darkSquareBg = EscapeSequences.SET_BG_COLOR_DARK_GREY;
-        String whitePieceColor = EscapeSequences.SET_TEXT_COLOR_RED;
-        String blackPieceColor = EscapeSequences.SET_TEXT_COLOR_BLUE;
+        ChessBoard chessBoard = currentChessGame.getBoard();
         String reset = EscapeSequences.RESET_BG_COLOR + EscapeSequences.RESET_TEXT_COLOR;
-        String emptySquare = EscapeSequences.EMPTY;
         String rowLabelColor = EscapeSequences.SET_TEXT_COLOR_LIGHT_GREY;
         String colLabelColor = EscapeSequences.SET_TEXT_COLOR_LIGHT_GREY;
-        String highlightColor = EscapeSequences.SET_BG_COLOR_GREEN;
-        if(perspective == null){ perspective = "observe"; }
-        if (perspective.equalsIgnoreCase("white") || perspective.equalsIgnoreCase("observe")) {
-            System.out.println(colLabelColor + "  a  b  c  d  e  f  g  h" + reset);
-            for (int row = 8; row >= 1; row--) {
-                System.out.print(rowLabelColor + row + " " + reset);
-                for (char colChar = 'a'; colChar <= 'h'; colChar++) {
-                    int col = colChar - 'a' + 1;
-                    ChessPosition pos = new ChessPosition(row, col);
-                    ChessPiece piece = chessBoard.getPiece(pos);
-                    String pieceChar = getPieceChar(piece);
-                    boolean isLight = (row + col) % 2 != 0;
-                    String bgColor = isLight ? lightSquareBg : darkSquareBg;
-                    String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE)
-                            ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_BLACK);
-                    if (selectedPosition != null && selectedPosition.equals(pos)){
-                        bgColor = highlightColor;
-                    } else{
-                        for (ChessMove move : legalMoves){
-                            if (move.getEndPosition().equals(pos)){
-                                bgColor = highlightColor;
-                                break;
-                            }
-                        }
-                    }
-                    System.out.print(bgColor + textColor + pieceChar + reset);
-                }
-                System.out.println();
-            }
-            System.out.println(colLabelColor + "  a  b  c  d  e  f  g  h" + reset);
-            System.out.println();
 
-        } else if (perspective.equalsIgnoreCase("black")) {
-            System.out.println(colLabelColor + "  h  g  f  e  d  c  b  a" + reset);
-            for (int row = 1; row <= 8; row++) {
-                System.out.print(rowLabelColor + row + " " + reset);
-                for (char colChar = 'h'; colChar >= 'a'; colChar--) {
-                    int col = colChar - 'a' + 1;
-                    ChessPosition pos = new ChessPosition(row, col);
-                    ChessPiece piece = chessBoard.getPiece(pos);
-                    String pieceChar = getPieceChar(piece);
-                    boolean isLight = (row + col) % 2 != 0;
-                    String bgColor = isLight ? lightSquareBg : darkSquareBg;
-                    String textColor = (piece != null && piece.getTeamColor() == ChessGame.TeamColor.WHITE)
-                            ? whitePieceColor : (piece != null ? blackPieceColor : EscapeSequences.SET_TEXT_COLOR_WHITE);
-                    if (selectedPosition != null && selectedPosition.equals(pos)) {
-                        bgColor = highlightColor;
-                    } else {
-                        for (ChessMove move : legalMoves) {
-                            if (move.getEndPosition().equals(pos)) {
-                                bgColor = highlightColor;
-                                break;
-                            }
-                        }
-                    }
-                    System.out.print(bgColor + textColor + pieceChar + reset);
-                }
-                System.out.println();
-            }
-            System.out.println(colLabelColor + "  h  g  f  e  d  c  b  a" + reset);
-            System.out.println();
-        } else {
-        System.out.println("Invalid perspective: " + perspective);
+        if (perspective == null) {
+            perspective = "observe";
         }
 
+        if (perspective.equalsIgnoreCase("white") || perspective.equalsIgnoreCase("observe")) {
+            printColumnLabels(colLabelColor, reset, false);
+            for (int row = 8; row >= 1; row--) {
+                printRow(chessBoard, legalMoves, selectedPosition, perspective, row, false, rowLabelColor, reset);
+            }
+            printColumnLabels(colLabelColor, reset, false);
+            System.out.println();
+        } else if (perspective.equalsIgnoreCase("black")) {
+            printColumnLabels(colLabelColor, reset, true);
+            for (int row = 1; row <= 8; row++) {
+                printRow(chessBoard, legalMoves, selectedPosition, perspective, row, true, rowLabelColor, reset);
+            }
+            printColumnLabels(colLabelColor, reset, true);
+            System.out.println();
+        } else {
+            System.out.println("Invalid perspective: " + perspective);
+        }
     }
+
+    private void printColumnLabels(String colLabelColor, String reset, boolean reverse) {
+        System.out.print(colLabelColor + "  ");
+        if (!reverse) {
+            for (char colChar = 'a'; colChar <= 'h'; colChar++) {
+                System.out.print(colChar + "  ");
+            }
+        } else {
+            for (char colChar = 'h'; colChar >= 'a'; colChar--) {
+                System.out.print(colChar + "  ");
+            }
+        }
+        System.out.println(reset);
+    }
+
+    private void printRow(ChessBoard chessBoard, Collection<ChessMove> legalMoves, ChessPosition selectedPosition,
+                          String perspective, int row, boolean reverse, String rowLabelColor, String reset) {
+        System.out.print(rowLabelColor + row + " " + reset);
+        if (!reverse) {
+            for (char colChar = 'a'; colChar <= 'h'; colChar++) {
+                int col = colChar - 'a' + 1;
+                printSquare(chessBoard, legalMoves, selectedPosition, perspective, row, col, reset);
+            }
+        } else {
+            for (char colChar = 'h'; colChar >= 'a'; colChar--) {
+                int col = colChar - 'a' + 1;
+                printSquare(chessBoard, legalMoves, selectedPosition, perspective, row, col, reset);
+            }
+        }
+        System.out.println();
+    }
+
+    private void printSquare(ChessBoard chessBoard, Collection<ChessMove> legalMoves, ChessPosition selectedPosition,
+                             String perspective, int row, int col, String reset) {
+        ChessPosition pos = new ChessPosition(row, col);
+        SquareAppearance appearance = getSquareAppearance(chessBoard, pos, perspective, legalMoves, selectedPosition);
+        System.out.print(appearance.bgColor + appearance.textColor + appearance.pieceChar + reset);
+    }
+
+
+
 
 }
