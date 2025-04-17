@@ -191,7 +191,8 @@ public class WebSocketHandler {
             }
             // Check if the sender is actually a player in this game
             if (!moverUsername.equals(initialGameData.whiteUsername()) && !moverUsername.equals(initialGameData.blackUsername())) {
-                sendError(session, "Error: Forbidden - Observers (" + moverUsername + ") cannot make moves in game " + gameID + ".");
+                sendError(session, "Error: Forbidden - Observers (" + moverUsername + ") " +
+                        "cannot make moves in game " + gameID + ".");
                 return;
             }
 
@@ -245,7 +246,8 @@ public class WebSocketHandler {
                 // (Ideally, gameService.makeMove handles this persistence reliably)
                 if (isNowGameOver && !initialGameData.game().getGameOver()) { // Check if it *just* ended
                     if (!updatedGame.getGameOver()) { // Double check if service failed to set flag
-                        System.err.println("SERVER WARNING: Checkmate/Stalemate detected, but game object not marked as over by service for game " + gameID);
+                        System.err.println("SERVER WARNING: Checkmate/Stalemate detected, " +
+                                "but game object not marked as over by service for game " + gameID);
                         updatedGame.setGameOver(true); // Mark it here
                         // Re-persist the final game over state
                         try {
@@ -309,14 +311,18 @@ public class WebSocketHandler {
 
     private String describeMoveForNotification(ChessMove move) {
         // Example: "from a2 to a4"
-        if (move == null) return "[invalid move]";
+        if (move == null) {
+            return "[invalid move]";
+        }
         return "from " + positionToString(move.getStartPosition()) +
                 " to " + positionToString(move.getEndPosition()) +
                 (move.getPromotionPiece() != null ? " promoting to " + move.getPromotionPiece() : "");
     }
 
     private String positionToString(ChessPosition pos) {
-        if (pos == null) return "[unknown]";
+        if (pos == null) {
+            return "[unknown]";
+        }
         char file = (char) ('a' + pos.getColumn() - 1);
         char rank = (char) ('1' + pos.getRow() - 1);
         return "" + file + rank;
@@ -482,9 +488,6 @@ public class WebSocketHandler {
                     }
                 }
 
-                /*for (Session session : sessions) {
-                    sendMessage(session, notificationMessage);
-                }*/
 
             } catch (DataAccessException e) {
                 System.err.println("Error retrieving auth data for notification: " + e.getMessage());

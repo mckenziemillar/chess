@@ -222,9 +222,7 @@ public class ChessClient extends Endpoint{
                 default:
                     System.out.println("Invalid command. Type 'help' for available commands.");
             }
-            /*if (command.toLowerCase().startsWith("play game") || command.toLowerCase().startsWith("observe game")) {
-                handleGameplay(scanner, gameID);
-            }*/
+
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
@@ -570,7 +568,6 @@ public class ChessClient extends Endpoint{
         UserGameCommand connectCommand = new UserGameCommand(UserGameCommand.CommandType.CONNECT, authToken, gameID);
         String jsonCommand = gson.toJson(connectCommand);
         System.out.println("Sending WebSocket CONNECT message: " + jsonCommand);
-        //.webSocket.sendText(jsonCommand, true);
         try {
             this.session.getBasicRemote().sendText(jsonCommand);
         } catch (IOException e) {
@@ -584,20 +581,7 @@ public class ChessClient extends Endpoint{
             switch (serverMessage.getServerMessageType()) {
                 case LOAD_GAME:
                     System.out.println("Received LOAD_GAME message: " + message);
-                    /*if (serverMessage.getGame() != null) {
-                        GameData gameData = (GameData) serverMessage.getGame();
-                        //drawBoard(gameData, determinePerspective(gameData));
-                        if (gameData != null && gameData.game() != null) {
-                            this.currentChessGame = gameData.game(); // Store the game state
-                            String perspective = determinePerspective(gameData);
-                            drawBoard(gameData, perspective); // Draw the received board
-                        } else {
-                            System.err.println("Error: LOAD_GAME data or game object is null.");
-                        }
-                    } else {
-                        System.err.println("Error: LOAD_GAME message does not contain game data.");
-                    }
-                    break;*/
+
                     Object gamePayload = serverMessage.getGame(); // Get the payload object
                     if (gamePayload != null) {
                         GameData gameData = null;
@@ -605,11 +589,6 @@ public class ChessClient extends Endpoint{
                             // Convert the generic payload object back to JSON, then parse into GameData
                             String gameJson = gson.toJson(gamePayload);
                             gameData = gson.fromJson(gameJson, GameData.class);
-
-                            // **Important**: If ChessGame, ChessBoard, or ChessPiece are interfaces
-                            // or abstract classes, Gson needs TypeAdapters to deserialize them correctly.
-                            // If you haven't configured Gson with these, gameData.game() might still be null
-                            // or incomplete even if gson.fromJson doesn't throw an error here.
 
                         } catch (JsonParseException | ClassCastException e) {
                             System.err.println("Error parsing GameData from LOAD_GAME payload: " + e.getMessage());
@@ -624,7 +603,8 @@ public class ChessClient extends Endpoint{
                         } else {
                             System.err.println("Error: LOAD_GAME data, game object, or board is null after parsing.");
                             if(gameData != null && gameData.game() == null) System.err.println("DEBUG: gameData.game() is null.");
-                            if(gameData != null && gameData.game() != null && gameData.game().getBoard() == null) System.err.println("DEBUG: gameData.game().getBoard() is null.");
+                            if(gameData != null && gameData.game() != null && gameData.game().getBoard() == null)
+                                System.err.println("DEBUG: gameData.game().getBoard() is null.");
 
                         }
                     } else {
@@ -653,7 +633,8 @@ public class ChessClient extends Endpoint{
                     }
                     break;
                 default:
-                    System.out.println("Received unknown WebSocket message type: " + serverMessage.getServerMessageType());
+                    System.out.println("Received unknown WebSocket message type: " +
+                            serverMessage.getServerMessageType());
             }
         } catch (JsonParseException e) {
             System.err.println("Error parsing WebSocket message: " + e.getMessage());
@@ -880,12 +861,5 @@ public class ChessClient extends Endpoint{
         }
         System.out.println(colLabelColor + "  a  b  c  d  e  f  g  h" + reset);
         System.out.println();
-    }
-
-
-
-    private void redrawBoard(int gameID, Session currentSession) {
-        System.out.println("Requesting board redraw from server.");
-        sendRedrawBoardRequest(gameID, currentSession);
     }
 }

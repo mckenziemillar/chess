@@ -217,7 +217,6 @@ public class GameService {
             throw new DataAccessException("Error: unauthorized");
         }
 
-        // 2. Retrieve the GameData
         GameData gameData = dataAccess.getGame(gameID);
         if (gameData == null) {
             throw new DataAccessException("Error: bad request - Game not found");
@@ -227,15 +226,15 @@ public class GameService {
             throw new DataAccessException("Error: bad request - Observers cannot resign.");
         }
         ChessGame game = gameData.game();
-        if (game == null) throw new DataAccessException("Error: Game object missing in GameData for ID: " + gameID);
-        /*if (game.getGameOver()) {
-            throw new DataAccessException("Error: bad request - Game is already over");
-        }*/
+        if (game == null) {
+            throw new DataAccessException("Error: Game object missing in GameData for ID: " + gameID);
+        }
+
         game.setGameOver(true);
         GameData updatedGameData = new GameData(gameData.gameID(), gameData.whiteUsername(),
                 gameData.blackUsername(), gameData.gameName(), gameData.game());
 
-        // 4. Persist the updated GameData
+
         dataAccess.updateGame(updatedGameData);
     }
 }
